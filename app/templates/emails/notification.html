@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header_title %}Notificación{% endblock %}
+
+{% block content %}
+<h2>Hola, {{ name }}! 📬</h2>
+
+<p>Te enviamos esta notificación desde <strong>{{ app_name }}</strong>:</p>
+
+<div class="info-box">
+    <h3 style="margin-top: 0; color: #667eea;">{{ title }}</h3>
+    <p style="margin-bottom: 0;">{{ body }}</p>
+</div>
+
+<div class="divider"></div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Esta es una notificación automática. Si tienes alguna pregunta, no dudes en contactarnos.
+</p>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

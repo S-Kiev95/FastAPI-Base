@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}¡Bienvenido a {{ app_name }}!{% endblock %}
+
+{% block header_title %}¡Bienvenido!{% endblock %}
+
+{% block content %}
+<h2>¡Hola, {{ name }}! 👋</h2>
+
+<p>Estamos emocionados de tenerte con nosotros. Gracias por unirte a <strong>{{ app_name }}</strong>.</p>
+
+<p>Tu cuenta ha sido creada exitosamente y ya puedes comenzar a disfrutar de todas nuestras funcionalidades.</p>
+
+{% if verification_url %}
+<div class="info-box">
+    <p style="margin: 0;"><strong>Un paso más:</strong> Por favor verifica tu correo electrónico para activar todas las funciones de tu cuenta.</p>
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ verification_url }}" class="button">Verificar mi correo</a>
+</div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+    <a href="{{ verification_url }}" style="color: #667eea; word-break: break-all;">{{ verification_url }}</a>
+</p>
+{% else %}
+<div style="text-align: center;">
+    <a href="#" class="button">Comenzar ahora</a>
+</div>
+{% endif %}
+
+<div class="divider"></div>
+
+<p><strong>¿Necesitas ayuda?</strong></p>
+<p>Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos. Estamos aquí para ayudarte.</p>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

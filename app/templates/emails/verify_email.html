@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Verifica tu correo electrónico{% endblock %}
+
+{% block header_title %}Verificación de Email{% endblock %}
+
+{% block content %}
+<h2>Hola, {{ name }}! 👋</h2>
+
+<p>Gracias por registrarte en <strong>{{ app_name }}</strong>.</p>
+
+<p>Para completar tu registro y activar tu cuenta, necesitamos verificar que esta dirección de correo electrónico te pertenece.</p>
+
+<div class="info-box">
+    <p style="margin: 0;"><strong>⚠️ Importante:</strong> Este enlace de verificación expirará en 24 horas por razones de seguridad.</p>
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ verification_url }}" class="button">Verificar mi correo</a>
+</div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+    <a href="{{ verification_url }}" style="color: #667eea; word-break: break-all;">{{ verification_url }}</a>
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    <strong>¿No solicitaste esta verificación?</strong><br>
+    Si no creaste una cuenta en {{ app_name }}, puedes ignorar este correo de forma segura.
+</p>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

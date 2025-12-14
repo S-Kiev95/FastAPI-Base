@@ -1,0 +1,66 @@
+### FastAPI Base Template - Ejemplos de API
+### Usa esta archivo con la extensión REST Client de VS Code
+
+@baseUrl = http://localhost:8000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Root Endpoint
+GET {{baseUrl}}/
+
+### Obtener todos los usuarios
+GET {{baseUrl}}/users/
+
+### Obtener todos los usuarios con paginación
+GET {{baseUrl}}/users/?skip=0&limit=10
+
+### Crear un nuevo usuario
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+  "provider": "google",
+  "provider_user_id": "123456789",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "picture": "https://lh3.googleusercontent.com/a/default-user"
+}
+
+### Crear otro usuario
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+  "provider": "google",
+  "provider_user_id": "987654321",
+  "email": "jane@example.com",
+  "name": "Jane Smith",
+  "picture": "https://lh3.googleusercontent.com/a/jane-user"
+}
+
+### Obtener usuario por ID (cambiar el ID según necesites)
+GET {{baseUrl}}/users/1
+
+### Obtener usuario por email
+GET {{baseUrl}}/users/email/user@example.com
+
+### Actualizar usuario
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+  "name": "John Updated",
+  "is_active": true
+}
+
+### Desactivar usuario
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+  "is_active": false
+}
+
+### Eliminar usuario
+DELETE {{baseUrl}}/users/1

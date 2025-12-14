@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)",
+      "Bash(curl:*)",
+      "Bash(uv add:*)",
+      "Bash(pkill:*)",
+      "Bash(alembic init:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Bash(if exist app.db del app.db)",
+      "Bash(for:*)",
+      "Bash(do curl -s http://localhost:8001/users/)",
+      "Bash(done)",
+      "Bash(awk:*)",
+      "Bash(xargs kill:*)",
+      "Bash(xargs:*)",
+      "Read(//c//**)",
+      "Bash(uv pip install:*)",
+      "Read(//c/Users/zeek2/OneDrive/Escritorio/**)",
+      "Bash(uv pip uninstall:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
