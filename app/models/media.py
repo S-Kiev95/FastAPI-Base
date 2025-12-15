@@ -3,8 +3,17 @@ Media model for storing multimedia files metadata.
 Actual files are stored in S3/MinIO or local filesystem.
 """
 from datetime import datetime
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import Optional, List
+from sqlmodel import Field, SQLModel, Column
+from sqlalchemy import Text
+
+# Conditional import for pgvector support
+try:
+    from pgvector.sqlalchemy import Vector
+    PGVECTOR_AVAILABLE = True
+except ImportError:
+    PGVECTOR_AVAILABLE = False
+    Vector = None
 
 
 class Media(SQLModel, table=True):
@@ -28,6 +37,17 @@ class Media(SQLModel, table=True):
     # Metadata
     description: Optional[str] = None
     alt_text: Optional[str] = None  # For accessibility
+
+    # Vector embedding (optional - for semantic search, face recognition, audio similarity, etc.)
+    # The developer can use this for:
+    # - Text embeddings (OpenAI, Cohere, etc.)
+    # - Image embeddings (CLIP, ResNet, etc.)
+    # - Face embeddings (DeepFace, FaceNet, etc.)
+    # - Audio embeddings (Resemblyzer, VGGish, etc.)
+    embedding: Optional[List[float]] = Field(
+        default=None,
+        sa_column=Column(Vector(512)) if PGVECTOR_AVAILABLE else Column(Text)
+    )
 
     # Ownership (optional - link to user)
     user_id: Optional[int] = Field(default=None, index=True)
@@ -58,6 +78,7 @@ class MediaCreate(SQLModel):
     file_type: str
     description: Optional[str] = None
     alt_text: Optional[str] = None
+    embedding: Optional[List[float]] = None  # Optional vector embedding
     user_id: Optional[int] = None
     storage_backend: str = "local"
     is_public: bool = False
@@ -73,6 +94,7 @@ class MediaRead(SQLModel):
     file_type: str
     description: Optional[str]
     alt_text: Optional[str]
+    embedding: Optional[List[float]] = None  # Vector embedding (if available)
     user_id: Optional[int]
     storage_backend: str
     is_public: bool
@@ -89,6 +111,7 @@ class MediaUpdate(SQLModel):
     filename: Optional[str] = None
     description: Optional[str] = None
     alt_text: Optional[str] = None
+    embedding: Optional[List[float]] = None  # Update vector embedding
     is_public: Optional[bool] = None
     is_active: Optional[bool] = None
 
