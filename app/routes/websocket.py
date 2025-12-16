@@ -34,7 +34,7 @@ async def websocket_endpoint(
         client_id = str(uuid.uuid4())
 
     # Validate channel
-    valid_channels = ["users", "media"]  # Add more as you create them
+    valid_channels = ["users", "media", "tasks"]  # Add more as you create them
     if channel not in valid_channels:
         await websocket.close(code=1008, reason=f"Invalid channel: {channel}")
         return

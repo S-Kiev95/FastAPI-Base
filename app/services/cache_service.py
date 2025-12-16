@@ -47,10 +47,10 @@ class CacheService:
 
                 # Test connection
                 self.client.ping()
-                print(f"✓ Redis cache enabled at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                print(f"[OK] Redis cache enabled at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 
             except (ConnectionError, RedisError) as e:
-                print(f"✗ Redis connection failed: {str(e)}")
+                print(f"[ERROR] Redis connection failed: {str(e)}")
                 print("  Cache will be disabled for this session")
                 self.enabled = False
                 self.client = None

@@ -29,7 +29,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(docker-compose:*)",
+      "Bash(powershell -Command \"Start-Process ''C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe''\")",
+      "Bash(test:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []

@@ -74,6 +74,57 @@ services:
     depends_on:
       - redis
 
+  # ARQ Worker para procesamiento de media
+  worker-media:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_worker_media_dev
+    restart: unless-stopped
+    command: arq app.workers.worker_config.WorkerSettings
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/fastapi_db
+    volumes:
+      - ./media:/app/media  # Share media folder with host
+      - .:/app  # Mount code for development
+    networks:
+      - fastapi_network
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ARQ Worker para envío de emails (se puede escalar)
+  worker-email:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_worker_email_dev
+    restart: unless-stopped
+    command: arq app.workers.worker_config.WorkerSettings
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      # SMTP configuration (if needed)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-FastAPI}
+    volumes:
+      - .:/app  # Mount code for development
+    networks:
+      - fastapi_network
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     driver: local

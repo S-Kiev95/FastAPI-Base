@@ -1,4 +1,5 @@
 import uvicorn
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,8 +19,10 @@ from app.routes.roles import router as roles_router
 from app.routes.email import router as email_router
 from app.routes.cors import router as cors_router
 from app.routes.metrics import router as metrics_router
+from app.routes.tasks import router as tasks_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
+from app.services.task_notification_service import start_task_notification_listener
 
 
 @asynccontextmanager
@@ -39,6 +42,11 @@ async def lifespan(app: FastAPI):
     else:
         print("Initializing database...")
         init_db()
+
+    # Start task notification listener (if Redis is enabled)
+    if settings.REDIS_ENABLED:
+        asyncio.create_task(start_task_notification_listener())
+        print("[OK] Task notification listener started")
 
     yield
 
@@ -89,6 +97,7 @@ app.include_router(roles_router)
 app.include_router(email_router)
 app.include_router(cors_router)
 app.include_router(metrics_router)
+app.include_router(tasks_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics
