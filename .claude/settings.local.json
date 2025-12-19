@@ -33,7 +33,10 @@
       "Bash(docker-compose:*)",
       "Bash(powershell -Command \"Start-Process ''C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe''\")",
       "Bash(test:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(if exist LOGGING.md move LOGGING.md docs )",
+      "Bash(if exist RATE_LIMITING.md move RATE_LIMITING.md docs)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []

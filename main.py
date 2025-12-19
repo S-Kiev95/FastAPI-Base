@@ -20,6 +20,7 @@ from app.routes.email import router as email_router
 from app.routes.cors import router as cors_router
 from app.routes.metrics import router as metrics_router
 from app.routes.tasks import router as tasks_router
+from app.routes.webhooks import router as webhooks_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -118,6 +119,7 @@ app.include_router(email_router)
 app.include_router(cors_router)
 app.include_router(metrics_router)
 app.include_router(tasks_router)
+app.include_router(webhooks_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics

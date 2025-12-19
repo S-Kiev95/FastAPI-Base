@@ -48,6 +48,10 @@ fastapi_base/
 - **FastAPI**: Framework moderno y rápido para construir APIs
 - **SQLModel**: ORM basado en Pydantic y SQLAlchemy
 - **WebSocket Real-time**: Sistema completo de actualizaciones en tiempo real con canales por modelo
+- **Webhooks**: Sistema completo de webhooks con HMAC signatures, retries y logging
+- **Sistema de Colas (ARQ)**: Procesamiento asíncrono de tareas (media, emails, webhooks)
+- **Rate Limiting**: Protección contra abuso con límites configurables por endpoint
+- **Structured Logging**: Logs estructurados JSON con request IDs y contextos
 - **BaseService Genérico**: CRUD con WebSocket automático mediante herencia - agrega nuevos modelos en minutos
 - **Sistema de Filtros Avanzado**: Filtrado, ordenamiento y paginación heredados automáticamente en todos los servicios
 - **Almacenamiento Multimedia**: Soporte para S3/MinIO y filesystem local con cambio automático según configuración
@@ -433,6 +437,16 @@ app.include_router(items_router)
 ```
 
 ## Documentación Adicional
+
+Toda la documentación técnica ha sido movida a la carpeta `docs/` para mejor organización:
+
+### Guías del Sistema
+
+- **[docs/WEBHOOKS.md](docs/WEBHOOKS.md)** - Sistema completo de webhooks para integraciones externas
+- **[docs/RATE_LIMITING.md](docs/RATE_LIMITING.md)** - Protección contra abuso con rate limiting
+- **[docs/LOGGING.md](docs/LOGGING.md)** - Logging estructurado con request IDs y contextos
+
+### Guías de Desarrollo
 
 - [EXAMPLE_POST_MODEL.md](EXAMPLE_POST_MODEL.md) - **Tutorial completo**: Cómo agregar un modelo Post con BaseService (paso a paso)
 - [BASE_SERVICE_ARCHITECTURE.md](BASE_SERVICE_ARCHITECTURE.md) - Arquitectura del BaseService genérico

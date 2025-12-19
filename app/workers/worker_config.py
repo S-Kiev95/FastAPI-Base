@@ -22,6 +22,9 @@ from app.workers.email_tasks import (
     send_single_email,
     send_bulk_emails,
 )
+from app.workers.webhook_tasks import (
+    deliver_webhook,
+)
 
 
 class WorkerSettings:
@@ -49,6 +52,9 @@ class WorkerSettings:
         # Email tasks
         send_single_email,
         send_bulk_emails,
+
+        # Webhook tasks
+        deliver_webhook,
     ]
 
     # Worker configuration

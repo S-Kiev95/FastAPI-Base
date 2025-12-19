@@ -246,6 +246,45 @@ class QueueService:
                    rate_limit=rate_limit)
         return job.job_id
 
+    # Webhook Tasks
+
+    async def enqueue_webhook_delivery(
+        self,
+        subscription_id: int,
+        event_type: str,
+        payload: dict,
+        attempt_number: int = 1
+    ) -> str:
+        """
+        Enqueue webhook delivery task
+
+        Args:
+            subscription_id: Webhook subscription ID
+            event_type: Type of event
+            payload: Event payload
+            attempt_number: Current attempt number (for retries)
+
+        Returns:
+            Task ID
+        """
+        if not self.initialized:
+            await self.initialize()
+
+        job = await self.redis.enqueue_job(
+            'deliver_webhook',
+            subscription_id,
+            event_type,
+            payload,
+            attempt_number
+        )
+
+        logger.info("Enqueued webhook delivery task",
+                   subscription_id=subscription_id,
+                   event_type=event_type,
+                   job_id=job.job_id,
+                   attempt=attempt_number)
+        return job.job_id
+
     # Task Status
 
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
