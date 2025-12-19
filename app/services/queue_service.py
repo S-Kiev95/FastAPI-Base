@@ -13,6 +13,9 @@ from arq.connections import ArqRedis
 from redis.asyncio import Redis
 
 from app.config import settings
+from app.utils.logger import get_structured_logger
+
+logger = get_structured_logger(__name__)
 
 
 class QueueService:
@@ -55,9 +58,11 @@ class QueueService:
                 }
             )
             self.initialized = True
-            print(f"[OK] ARQ Queue initialized at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+            logger.info("ARQ Queue initialized",
+                       host=settings.REDIS_HOST,
+                       port=settings.REDIS_PORT)
         except Exception as e:
-            print(f"[ERROR] Failed to initialize ARQ queue: {e}")
+            logger.error("Failed to initialize ARQ queue", error=str(e))
             raise
 
     async def close(self):
@@ -95,7 +100,10 @@ class QueueService:
             operations or ['thumbnail', 'optimize']
         )
 
-        print(f"[Queue] Enqueued media processing: media_id={media_id}, job_id={job.job_id}")
+        logger.info("Enqueued media processing task",
+                   media_id=media_id,
+                   job_id=job.job_id,
+                   operations=operations or ['thumbnail', 'optimize'])
         return job.job_id
 
     async def enqueue_thumbnail_generation(
@@ -125,7 +133,10 @@ class QueueService:
             thumbnail_size
         )
 
-        print(f"[Queue] Enqueued thumbnail generation: media_id={media_id}, job_id={job.job_id}")
+        logger.info("Enqueued thumbnail generation task",
+                   media_id=media_id,
+                   job_id=job.job_id,
+                   thumbnail_size=thumbnail_size)
         return job.job_id
 
     async def enqueue_image_optimization(
@@ -155,7 +166,10 @@ class QueueService:
             quality
         )
 
-        print(f"[Queue] Enqueued image optimization: media_id={media_id}, job_id={job.job_id}")
+        logger.info("Enqueued image optimization task",
+                   media_id=media_id,
+                   job_id=job.job_id,
+                   quality=quality)
         return job.job_id
 
     # Email Tasks
@@ -193,7 +207,10 @@ class QueueService:
             user_id
         )
 
-        print(f"[Queue] Enqueued email: to={to_email}, job_id={job.job_id}")
+        logger.info("Enqueued email sending task",
+                   to_email=to_email,
+                   job_id=job.job_id,
+                   subject=subject)
         return job.job_id
 
     async def enqueue_bulk_emails(
@@ -223,7 +240,10 @@ class QueueService:
             user_id
         )
 
-        print(f"[Queue] Enqueued bulk emails: count={len(emails)}, job_id={job.job_id}")
+        logger.info("Enqueued bulk emails task",
+                   email_count=len(emails),
+                   job_id=job.job_id,
+                   rate_limit=rate_limit)
         return job.job_id
 
     # Task Status
@@ -280,10 +300,10 @@ class QueueService:
             job = await self.redis.get_job(task_id)
             if job and job.status == "queued":
                 await job.abort()
-                print(f"[Queue] Cancelled task: {task_id}")
+                logger.info("Task cancelled", task_id=task_id)
                 return True
         except Exception as e:
-            print(f"[Queue] Failed to cancel task {task_id}: {e}")
+            logger.error("Failed to cancel task", task_id=task_id, error=str(e))
 
         return False
 

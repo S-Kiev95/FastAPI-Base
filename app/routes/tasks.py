@@ -6,11 +6,12 @@ Provides REST API to:
 - Cancel tasks
 - List user's tasks
 """
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from typing import Optional
 
 from app.services.queue_service import queue_service
 from app.services.task_notification_service import task_notification_service
+from app.utils.rate_limit_decorator import rate_limit
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -80,7 +81,9 @@ async def cancel_task(task_id: str):
 
 
 @router.post("/media/process")
+@rate_limit(limit=50, window=60)  # 50 media processing tasks per minute
 async def enqueue_media_processing(
+    request: Request,
     media_id: int,
     file_path: str,
     operations: Optional[list] = None
@@ -132,7 +135,9 @@ async def enqueue_media_processing(
 
 
 @router.post("/media/thumbnail")
+@rate_limit(limit=50, window=60)  # 50 thumbnail generations per minute
 async def enqueue_thumbnail_generation(
+    request: Request,
     media_id: int,
     file_path: str,
     thumbnail_size: tuple = (300, 300)
@@ -167,7 +172,9 @@ async def enqueue_thumbnail_generation(
 
 
 @router.post("/email/send")
+@rate_limit(limit=30, window=60)  # 30 emails per minute
 async def enqueue_email(
+    request: Request,
     to_email: str,
     subject: str,
     body: str,
@@ -218,9 +225,11 @@ async def enqueue_email(
 
 
 @router.post("/email/bulk")
+@rate_limit(limit=5, window=3600)  # 5 bulk email operations per hour
 async def enqueue_bulk_emails(
+    request: Request,
     emails: list,
-    rate_limit: int = 10,
+    rate_limit_emails: int = 10,
     user_id: Optional[int] = None
 ):
     """
@@ -261,7 +270,7 @@ async def enqueue_bulk_emails(
 
     task_id = await queue_service.enqueue_bulk_emails(
         emails=emails,
-        rate_limit=rate_limit,
+        rate_limit=rate_limit_emails,
         user_id=user_id
     )
 
@@ -269,5 +278,5 @@ async def enqueue_bulk_emails(
         "task_id": task_id,
         "message": "Bulk email task enqueued",
         "total_emails": len(emails),
-        "rate_limit": rate_limit,
+        "rate_limit": rate_limit_emails,
     }

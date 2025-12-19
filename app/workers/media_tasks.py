@@ -14,6 +14,9 @@ from datetime import datetime
 from PIL import Image
 
 from app.config import settings
+from app.utils.logger import get_structured_logger, LogContext
+
+logger = get_structured_logger(__name__)
 
 
 async def generate_thumbnail(
@@ -34,47 +37,49 @@ async def generate_thumbnail(
     Returns:
         Dict with thumbnail path and metadata
     """
-    print(f"[Worker] Generating thumbnail for media_id={media_id}")
+    job_id = ctx.get("job_id")
+    with LogContext(job_id=job_id, media_id=media_id, task="generate_thumbnail"):
+        logger.info("Starting thumbnail generation", thumbnail_size=thumbnail_size)
 
-    # Update task status to processing
-    await _update_task_status(ctx, "processing", progress=10)
+        # Update task status to processing
+        await _update_task_status(ctx, "processing", progress=10)
 
-    try:
-        # Load image
-        img = Image.open(file_path)
+        try:
+            # Load image
+            img = Image.open(file_path)
 
-        await _update_task_status(ctx, "processing", progress=30)
+            await _update_task_status(ctx, "processing", progress=30)
 
-        # Create thumbnail
-        img.thumbnail(thumbnail_size, Image.Resampling.LANCZOS)
+            # Create thumbnail
+            img.thumbnail(thumbnail_size, Image.Resampling.LANCZOS)
 
-        await _update_task_status(ctx, "processing", progress=60)
+            await _update_task_status(ctx, "processing", progress=60)
 
-        # Save thumbnail
-        file_path_obj = Path(file_path)
-        thumbnail_path = file_path_obj.parent / f"{file_path_obj.stem}_thumb{file_path_obj.suffix}"
-        img.save(thumbnail_path, optimize=True, quality=85)
+            # Save thumbnail
+            file_path_obj = Path(file_path)
+            thumbnail_path = file_path_obj.parent / f"{file_path_obj.stem}_thumb{file_path_obj.suffix}"
+            img.save(thumbnail_path, optimize=True, quality=85)
 
-        await _update_task_status(ctx, "processing", progress=90)
+            await _update_task_status(ctx, "processing", progress=90)
 
-        result = {
-            "media_id": media_id,
-            "thumbnail_path": str(thumbnail_path),
-            "thumbnail_size": img.size,
-            "original_size": Image.open(file_path).size,
-        }
+            result = {
+                "media_id": media_id,
+                "thumbnail_path": str(thumbnail_path),
+                "thumbnail_size": img.size,
+                "original_size": Image.open(file_path).size,
+            }
 
-        # Publish notification
-        await _publish_notification(ctx, media_id, "thumbnail_generated", result)
+            # Publish notification
+            await _publish_notification(ctx, media_id, "thumbnail_generated", result)
 
-        print(f"[Worker] Thumbnail generated: {thumbnail_path}")
-        return result
+            logger.info("Thumbnail generated successfully", thumbnail_path=str(thumbnail_path))
+            return result
 
-    except Exception as e:
-        error_msg = f"Failed to generate thumbnail: {str(e)}"
-        print(f"[Worker] ERROR: {error_msg}")
-        await _publish_notification(ctx, media_id, "thumbnail_failed", {"error": error_msg})
-        raise
+        except Exception as e:
+            error_msg = f"Failed to generate thumbnail: {str(e)}"
+            logger.error("Thumbnail generation failed", error=str(e))
+            await _publish_notification(ctx, media_id, "thumbnail_failed", {"error": error_msg})
+            raise
 
 
 async def optimize_image(
@@ -97,60 +102,64 @@ async def optimize_image(
     Returns:
         Dict with optimized image info
     """
-    print(f"[Worker] Optimizing image for media_id={media_id}")
+    job_id = ctx.get("job_id")
+    with LogContext(job_id=job_id, media_id=media_id, task="optimize_image"):
+        logger.info("Starting image optimization", quality=quality, max_size=max_size)
 
-    await _update_task_status(ctx, "processing", progress=10)
+        await _update_task_status(ctx, "processing", progress=10)
 
-    try:
-        # Load image
-        img = Image.open(file_path)
-        original_size = os.path.getsize(file_path)
+        try:
+            # Load image
+            img = Image.open(file_path)
+            original_size = os.path.getsize(file_path)
 
-        await _update_task_status(ctx, "processing", progress=30)
+            await _update_task_status(ctx, "processing", progress=30)
 
-        # Resize if too large
-        if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            # Resize if too large
+            if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
-        await _update_task_status(ctx, "processing", progress=60)
+            await _update_task_status(ctx, "processing", progress=60)
 
-        # Save optimized version
-        file_path_obj = Path(file_path)
-        optimized_path = file_path_obj.parent / f"{file_path_obj.stem}_optimized{file_path_obj.suffix}"
+            # Save optimized version
+            file_path_obj = Path(file_path)
+            optimized_path = file_path_obj.parent / f"{file_path_obj.stem}_optimized{file_path_obj.suffix}"
 
-        # Convert RGBA to RGB if saving as JPEG
-        if img.mode == 'RGBA' and file_path_obj.suffix.lower() in ['.jpg', '.jpeg']:
-            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-            rgb_img.paste(img, mask=img.split()[3])
-            img = rgb_img
+            # Convert RGBA to RGB if saving as JPEG
+            if img.mode == 'RGBA' and file_path_obj.suffix.lower() in ['.jpg', '.jpeg']:
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                rgb_img.paste(img, mask=img.split()[3])
+                img = rgb_img
 
-        img.save(optimized_path, optimize=True, quality=quality)
+            img.save(optimized_path, optimize=True, quality=quality)
 
-        await _update_task_status(ctx, "processing", progress=90)
+            await _update_task_status(ctx, "processing", progress=90)
 
-        optimized_size = os.path.getsize(optimized_path)
-        compression_ratio = (1 - optimized_size / original_size) * 100
+            optimized_size = os.path.getsize(optimized_path)
+            compression_ratio = (1 - optimized_size / original_size) * 100
 
-        result = {
-            "media_id": media_id,
-            "optimized_path": str(optimized_path),
-            "original_size_bytes": original_size,
-            "optimized_size_bytes": optimized_size,
-            "compression_ratio_percent": round(compression_ratio, 2),
-            "dimensions": img.size,
-        }
+            result = {
+                "media_id": media_id,
+                "optimized_path": str(optimized_path),
+                "original_size_bytes": original_size,
+                "optimized_size_bytes": optimized_size,
+                "compression_ratio_percent": round(compression_ratio, 2),
+                "dimensions": img.size,
+            }
 
-        # Publish notification
-        await _publish_notification(ctx, media_id, "image_optimized", result)
+            # Publish notification
+            await _publish_notification(ctx, media_id, "image_optimized", result)
 
-        print(f"[Worker] Image optimized: {optimized_path} (saved {compression_ratio:.1f}%)")
-        return result
+            logger.info("Image optimized successfully",
+                       optimized_path=str(optimized_path),
+                       compression_ratio=round(compression_ratio, 2))
+            return result
 
-    except Exception as e:
-        error_msg = f"Failed to optimize image: {str(e)}"
-        print(f"[Worker] ERROR: {error_msg}")
-        await _publish_notification(ctx, media_id, "optimization_failed", {"error": error_msg})
-        raise
+        except Exception as e:
+            error_msg = f"Failed to optimize image: {str(e)}"
+            logger.error("Image optimization failed", error=str(e))
+            await _publish_notification(ctx, media_id, "optimization_failed", {"error": error_msg})
+            raise
 
 
 async def process_media(
@@ -174,51 +183,53 @@ async def process_media(
     if operations is None:
         operations = ['thumbnail', 'optimize']
 
-    print(f"[Worker] Processing media_id={media_id} with operations: {operations}")
+    job_id = ctx.get("job_id")
+    with LogContext(job_id=job_id, media_id=media_id, task="process_media"):
+        logger.info("Starting media processing", operations=operations)
 
-    await _update_task_status(ctx, "processing", progress=5)
+        await _update_task_status(ctx, "processing", progress=5)
 
-    results = {
-        "media_id": media_id,
-        "operations": {},
-    }
+        results = {
+            "media_id": media_id,
+            "operations": {},
+        }
 
-    try:
-        # Check if file is an image
         try:
-            img = Image.open(file_path)
-            img.verify()  # Verify it's a valid image
-        except Exception:
-            raise ValueError("File is not a valid image")
+            # Check if file is an image
+            try:
+                img = Image.open(file_path)
+                img.verify()  # Verify it's a valid image
+            except Exception:
+                raise ValueError("File is not a valid image")
 
-        total_ops = len(operations)
+            total_ops = len(operations)
 
-        # Generate thumbnail
-        if 'thumbnail' in operations:
-            await _update_task_status(ctx, "processing", progress=20)
-            thumbnail_result = await generate_thumbnail(ctx, media_id, file_path)
-            results["operations"]["thumbnail"] = thumbnail_result
+            # Generate thumbnail
+            if 'thumbnail' in operations:
+                await _update_task_status(ctx, "processing", progress=20)
+                thumbnail_result = await generate_thumbnail(ctx, media_id, file_path)
+                results["operations"]["thumbnail"] = thumbnail_result
 
-        # Optimize image
-        if 'optimize' in operations:
-            progress = 50 if 'thumbnail' in operations else 20
-            await _update_task_status(ctx, "processing", progress=progress)
-            optimize_result = await optimize_image(ctx, media_id, file_path)
-            results["operations"]["optimize"] = optimize_result
+            # Optimize image
+            if 'optimize' in operations:
+                progress = 50 if 'thumbnail' in operations else 20
+                await _update_task_status(ctx, "processing", progress=progress)
+                optimize_result = await optimize_image(ctx, media_id, file_path)
+                results["operations"]["optimize"] = optimize_result
 
-        await _update_task_status(ctx, "processing", progress=95)
+            await _update_task_status(ctx, "processing", progress=95)
 
-        # Publish final notification
-        await _publish_notification(ctx, media_id, "media_processed", results)
+            # Publish final notification
+            await _publish_notification(ctx, media_id, "media_processed", results)
 
-        print(f"[Worker] Media processing completed for media_id={media_id}")
-        return results
+            logger.info("Media processing completed successfully", operations_count=len(results["operations"]))
+            return results
 
-    except Exception as e:
-        error_msg = f"Failed to process media: {str(e)}"
-        print(f"[Worker] ERROR: {error_msg}")
-        await _publish_notification(ctx, media_id, "processing_failed", {"error": error_msg})
-        raise
+        except Exception as e:
+            error_msg = f"Failed to process media: {str(e)}"
+            logger.error("Media processing failed", error=str(e))
+            await _publish_notification(ctx, media_id, "processing_failed", {"error": error_msg})
+            raise
 
 
 # Helper functions
@@ -266,4 +277,4 @@ async def _publish_notification(
     channel = f"task_notifications:{media_id}"
     await redis.publish(channel, str(notification))
 
-    print(f"[Worker] Published notification to {channel}: {event_type}")
+    logger.debug("Published notification", channel=channel, event_type=event_type)

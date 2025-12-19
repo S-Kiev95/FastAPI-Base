@@ -69,6 +69,11 @@ class Settings:
     CORS_METHODS: str = os.getenv("CORS_METHODS", "*")  # Comma-separated methods or "*"
     CORS_HEADERS: str = os.getenv("CORS_HEADERS", "*")  # Comma-separated headers or "*"
 
+    # Logging Configuration
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_FORMAT: str = os.getenv("LOG_FORMAT", "json")  # json or text
+    LOG_FILE: str = os.getenv("LOG_FILE", "")  # Optional: path to log file (e.g., "logs/app.log")
+
     @property
     def cors_origins_list(self) -> list:
         """Convert CORS_ORIGINS string to list"""

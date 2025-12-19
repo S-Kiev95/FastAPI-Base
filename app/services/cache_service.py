@@ -11,6 +11,9 @@ import redis
 from redis.exceptions import ConnectionError, RedisError
 
 from app.config import settings
+from app.utils.logger import get_structured_logger
+
+logger = get_structured_logger(__name__)
 
 
 class CacheService:
@@ -47,15 +50,19 @@ class CacheService:
 
                 # Test connection
                 self.client.ping()
-                print(f"[OK] Redis cache enabled at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                logger.info("Redis cache enabled",
+                           host=settings.REDIS_HOST,
+                           port=settings.REDIS_PORT)
 
             except (ConnectionError, RedisError) as e:
-                print(f"[ERROR] Redis connection failed: {str(e)}")
-                print("  Cache will be disabled for this session")
+                logger.error("Redis connection failed, cache will be disabled",
+                            error=str(e),
+                            host=settings.REDIS_HOST,
+                            port=settings.REDIS_PORT)
                 self.enabled = False
                 self.client = None
         else:
-            print("  Cache disabled (REDIS_ENABLED=False)")
+            logger.info("Cache disabled", reason="REDIS_ENABLED=False")
 
     def _generate_key(self, prefix: str, **params) -> str:
         """
@@ -117,7 +124,7 @@ class CacheService:
             return None
 
         except (ConnectionError, RedisError, json.JSONDecodeError) as e:
-            print(f"Cache GET error: {str(e)}")
+            logger.warning("Cache GET error", error=str(e), prefix=prefix)
             return None
 
     def set(
@@ -156,7 +163,7 @@ class CacheService:
             return True
 
         except (ConnectionError, RedisError, TypeError) as e:
-            print(f"Cache SET error: {str(e)}")
+            logger.warning("Cache SET error", error=str(e), prefix=prefix)
             return False
 
     def delete(self, prefix: str, **params) -> bool:
@@ -182,7 +189,7 @@ class CacheService:
             return True
 
         except (ConnectionError, RedisError) as e:
-            print(f"Cache DELETE error: {str(e)}")
+            logger.warning("Cache DELETE error", error=str(e), prefix=prefix)
             return False
 
     def invalidate_pattern(self, pattern: str) -> int:
@@ -216,7 +223,7 @@ class CacheService:
             return 0
 
         except (ConnectionError, RedisError) as e:
-            print(f"Cache INVALIDATE_PATTERN error: {str(e)}")
+            logger.warning("Cache INVALIDATE_PATTERN error", error=str(e), pattern=pattern)
             return 0
 
     def invalidate_all(self, prefix: str) -> int:
@@ -247,11 +254,11 @@ class CacheService:
 
         try:
             self.client.flushdb()
-            print("✓ Cache cleared")
+            logger.info("Cache cleared successfully")
             return True
 
         except (ConnectionError, RedisError) as e:
-            print(f"Cache CLEAR error: {str(e)}")
+            logger.error("Cache CLEAR error", error=str(e))
             return False
 
     def get_stats(self) -> dict:

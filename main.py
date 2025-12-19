@@ -22,7 +22,13 @@ from app.routes.metrics import router as metrics_router
 from app.routes.tasks import router as tasks_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.logging import LoggingMiddleware
 from app.services.task_notification_service import start_task_notification_listener
+from app.utils.logger import get_structured_logger
+
+# Setup logger
+logger = get_structured_logger(__name__)
 
 
 @asynccontextmanager
@@ -31,26 +37,26 @@ async def lifespan(app: FastAPI):
     Lifespan event handler for the application.
     Checks if database exists and creates tables if needed.
     """
-    print("Starting FastAPI application...")
+    logger.info("Starting FastAPI application")
 
     # Check if tables already exist
     inspector = inspect(engine)
     existing_tables = inspector.get_table_names()
 
     if existing_tables:
-        print(f"Database already initialized with tables: {existing_tables}")
+        logger.info("Database already initialized", table_count=len(existing_tables))
     else:
-        print("Initializing database...")
+        logger.info("Initializing database")
         init_db()
 
     # Start task notification listener (if Redis is enabled)
     if settings.REDIS_ENABLED:
         asyncio.create_task(start_task_notification_listener())
-        print("[OK] Task notification listener started")
+        logger.info("Task notification listener started")
 
     yield
 
-    print("Shutting down FastAPI application...")
+    logger.info("Shutting down FastAPI application")
 
 
 # Create FastAPI application
@@ -70,11 +76,10 @@ def get_cors_origins():
         session = next(get_session())
         origins = cors_service.get_active_origins(session)
         session.close()
-        print(f"[OK] CORS configured with origins from database: {origins}")
+        logger.info("CORS configured with origins from database", origin_count=len(origins))
         return origins
     except Exception as e:
-        print(f"[WARNING] Could not load CORS origins from DB: {e}")
-        print(f"  Falling back to CORS_ORIGINS from environment: {settings.cors_origins_list}")
+        logger.warning("Could not load CORS origins from DB, falling back to environment", error=str(e))
         return settings.cors_origins_list
 
 app.add_middleware(
@@ -85,8 +90,23 @@ app.add_middleware(
     allow_headers=settings.CORS_HEADERS.split(",") if settings.CORS_HEADERS != "*" else ["*"],
 )
 
+# Add logging middleware (should be first to capture all requests)
+app.add_middleware(LoggingMiddleware)
+
 # Add metrics middleware to collect API metrics
 app.add_middleware(MetricsMiddleware)
+
+# Add rate limiting middleware (if Redis is enabled)
+if settings.REDIS_ENABLED:
+    app.add_middleware(
+        RateLimitMiddleware,
+        default_limit=100,  # 100 requests per minute (default)
+        default_window=60,
+        exclude_paths=["/health", "/metrics", "/docs", "/openapi.json", "/redoc"]
+    )
+    logger.info("Rate limiting enabled", default_limit=100, window=60)
+else:
+    logger.warning("Rate limiting disabled (Redis not enabled)")
 
 # Include routers
 app.include_router(auth_router)
