@@ -1,6 +1,10 @@
 import os
 from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
+
+# Base para modelos que usan SQLAlchemy pura (ej: webhook)
+Base = declarative_base()
 
 # Load environment variables
 load_dotenv()
