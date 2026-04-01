@@ -67,7 +67,8 @@ class TestProtectedEndpoints:
 class TestRefreshToken:
     def test_refresh_returns_valid_token(self, client, registered_user):
         response = client.post(
-            "/auth/refresh", headers=registered_user["headers"]
+            "/auth/refresh",
+            json={"refresh_token": registered_user["refresh_token"]},
         )
         assert response.status_code == 200
         new_token = response.json()["access_token"]

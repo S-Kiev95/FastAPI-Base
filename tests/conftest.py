@@ -27,6 +27,8 @@ def engine_fixture():
     from app.models.metric import ApiMetric  # noqa: F401
     from app.models.task import Task  # noqa: F401
     from app.models.organization import Organization, Membership  # noqa: F401
+    from app.models.refresh_token import RefreshToken  # noqa: F401
+    from app.models.invitation import Invitation  # noqa: F401
     # webhook.py usa SQLAlchemy Base (no SQLModel) — se excluye de tests por ahora
 
     SQLModel.metadata.create_all(engine)
@@ -57,7 +59,7 @@ def client_fixture(engine):
 
 @pytest.fixture(name="registered_user")
 def registered_user_fixture(client):
-    """Crea un usuario registrado y devuelve sus datos + token."""
+    """Crea un usuario registrado y devuelve sus datos + tokens."""
     user_data = {
         "email": "test@example.com",
         "password": "password123",
@@ -66,17 +68,19 @@ def registered_user_fixture(client):
     response = client.post("/auth/register", json=user_data)
     assert response.status_code == 201
 
-    # Login para obtener token
+    # Login para obtener tokens
     login_response = client.post(
         "/auth/login",
         json={"email": user_data["email"], "password": user_data["password"]},
     )
     assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    login_data = login_response.json()
+    token = login_data["access_token"]
 
     return {
         "user": response.json(),
         "token": token,
+        "refresh_token": login_data.get("refresh_token"),
         "password": user_data["password"],
         "headers": {"Authorization": f"Bearer {token}"},
     }
@@ -144,12 +148,13 @@ def registered_user_with_org_fixture(client):
         json={"email": user_data["email"], "password": user_data["password"]},
     )
     assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    login_data = login_response.json()
 
     return {
         "user": response.json(),
-        "token": token,
-        "headers": {"Authorization": f"Bearer {token}"},
+        "token": login_data["access_token"],
+        "refresh_token": login_data.get("refresh_token"),
+        "headers": {"Authorization": f"Bearer {login_data['access_token']}"},
         "org_slug": "mi-correduria",
     }
 
@@ -171,12 +176,13 @@ def second_user_with_org_fixture(client):
         json={"email": user_data["email"], "password": user_data["password"]},
     )
     assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    login_data = login_response.json()
 
     return {
         "user": response.json(),
-        "token": token,
-        "headers": {"Authorization": f"Bearer {token}"},
+        "token": login_data["access_token"],
+        "refresh_token": login_data.get("refresh_token"),
+        "headers": {"Authorization": f"Bearer {login_data['access_token']}"},
         "org_slug": "otra-correduria",
     }
 

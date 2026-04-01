@@ -14,7 +14,14 @@ from app.models.organization import (
     MembershipCreate, MembershipRead, MembershipUpdate, MembershipRole,
     slugify,
 )
+from app.models.invitation import InvitationCreate, InvitationRead
 from app.services.organization_service import organization_service, membership_service
+from app.services.invitation_service import invitation_service
+from app.config import settings
+import logging
+import uuid
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orgs", tags=["organizations"])
 
@@ -116,4 +123,69 @@ async def remove_member(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No se pudo remover al miembro (no existe o es owner)",
+        )
+
+
+# ---- Invitations ----
+
+@router.post("/{org_slug}/invitations", response_model=InvitationRead, status_code=status.HTTP_201_CREATED)
+async def create_invitation(
+    data: InvitationCreate,
+    tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    current_user: UserRead = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    """Enviar invitación por email (requiere admin+)."""
+    invitation, raw_token = invitation_service.create_invitation(
+        session, tenant.org_id, data.email, data.role, current_user.id,
+    )
+
+    # Intentar enviar email de invitación
+    try:
+        from app.services.email_service import email_service
+        accept_url = f"{settings.FRONTEND_URL}/accept-invitation?token={raw_token}"
+        import asyncio
+        asyncio.get_event_loop().create_task(
+            email_service.send_template_email(
+                to=data.email,
+                subject=f"Invitación a {tenant.organization.name}",
+                template_name="invitation.html",
+                context={
+                    "org_name": tenant.organization.name,
+                    "inviter_name": current_user.name or current_user.email,
+                    "role": data.role,
+                    "accept_url": accept_url,
+                    "expire_hours": settings.INVITATION_EXPIRE_HOURS,
+                    "app_name": settings.API_TITLE,
+                },
+            )
+        )
+    except Exception as e:
+        logger.warning(f"No se pudo enviar email de invitación: {e}")
+
+    return InvitationRead.model_validate(invitation)
+
+
+@router.get("/{org_slug}/invitations", response_model=List[InvitationRead])
+async def list_invitations(
+    tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    session: Session = Depends(get_session),
+):
+    """Listar invitaciones pendientes de la org (requiere admin+)."""
+    invitations = invitation_service.get_pending_invitations(session, tenant.org_id)
+    return [InvitationRead.model_validate(i) for i in invitations]
+
+
+@router.delete("/{org_slug}/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_invitation(
+    invitation_id: uuid.UUID,
+    tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    session: Session = Depends(get_session),
+):
+    """Revocar (eliminar) una invitación pendiente (requiere admin+)."""
+    revoked = invitation_service.revoke_invitation(session, invitation_id)
+    if not revoked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitación no encontrada o ya aceptada",
         )

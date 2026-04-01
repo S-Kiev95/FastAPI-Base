@@ -74,6 +74,12 @@ class Settings:
     LOG_FORMAT: str = os.getenv("LOG_FORMAT", "json")  # json or text
     LOG_FILE: str = os.getenv("LOG_FILE", "")  # Optional: path to log file (e.g., "logs/app.log")
 
+    # Auth tokens
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+    INVITATION_EXPIRE_HOURS: int = int(os.getenv("INVITATION_EXPIRE_HOURS", "48"))
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
     # Multi-tenancy
     DEFAULT_PLAN: str = os.getenv("DEFAULT_PLAN", "free")
     SYSTEM_ORG_SLUG: str = os.getenv("SYSTEM_ORG_SLUG", "system")

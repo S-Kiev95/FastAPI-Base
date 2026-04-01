@@ -56,6 +56,7 @@ class UserRead(SQLModel):
     name: Optional[str]
     picture: Optional[str]
     is_active: bool
+    is_verified: bool
     created_at: datetime
 
 
