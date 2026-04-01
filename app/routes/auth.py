@@ -8,7 +8,9 @@ from sqlmodel import Session
 
 from app.database import get_session
 from app.models.user import UserRegister, UserLogin, Token, UserRead, User
+from app.models.organization import slugify
 from app.services.user_service import user_service
+from app.services.organization_service import organization_service
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.dependencies import get_current_user, get_current_active_user
 
@@ -45,11 +47,27 @@ async def register(
         provider_user_id=None,
         hashed_password=get_password_hash(user_data.password),
         is_active=True,
-        is_verified=False  # Email verification can be implemented later
+        is_verified=False,
     )
 
     session.add(user)
-    session.commit()
+    session.flush()  # Obtener user.id antes de crear org
+
+    # Generar nombre y slug de organización
+    org_name = user_data.organization_name or user_data.email.split("@")[0]
+    slug = slugify(org_name)
+
+    # Asegurar slug único
+    existing_org = organization_service.get_by_slug(session, slug)
+    if existing_org:
+        import uuid as _uuid
+        slug = f"{slug}-{_uuid.uuid4().hex[:6]}"
+
+    # Crear org + membership(owner)
+    organization_service.create_with_owner(
+        session, name=org_name, slug=slug, owner_user_id=user.id
+    )
+
     session.refresh(user)
 
     # Broadcast via WebSocket

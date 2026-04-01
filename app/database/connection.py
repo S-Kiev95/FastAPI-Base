@@ -26,6 +26,7 @@ def init_db() -> None:
     """
     # Import all models here to ensure they are registered with SQLModel
     from app.models import User  # noqa: F401
+    from app.models.organization import Organization, Membership  # noqa: F401
     from app.models.media import Media  # noqa: F401
     from app.models.role import Role, Permission, UserRole, RolePermission  # noqa: F401
     from app.models.cors_origin import CorsOrigin  # noqa: F401

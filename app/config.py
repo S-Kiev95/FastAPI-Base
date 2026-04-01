@@ -74,6 +74,12 @@ class Settings:
     LOG_FORMAT: str = os.getenv("LOG_FORMAT", "json")  # json or text
     LOG_FILE: str = os.getenv("LOG_FILE", "")  # Optional: path to log file (e.g., "logs/app.log")
 
+    # Multi-tenancy
+    DEFAULT_PLAN: str = os.getenv("DEFAULT_PLAN", "free")
+    SYSTEM_ORG_SLUG: str = os.getenv("SYSTEM_ORG_SLUG", "system")
+    SYSTEM_ADMIN_EMAIL: str = os.getenv("SYSTEM_ADMIN_EMAIL", "")
+    SYSTEM_ADMIN_PASSWORD: str = os.getenv("SYSTEM_ADMIN_PASSWORD", "")
+
     @property
     def cors_origins_list(self) -> list:
         """Convert CORS_ORIGINS string to list"""

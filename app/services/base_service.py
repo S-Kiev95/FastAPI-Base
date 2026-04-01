@@ -1,6 +1,8 @@
+import uuid
 from datetime import datetime
 from typing import Generic, TypeVar, Optional, Type, List
 from sqlmodel import Session, SQLModel, select, func
+from sqlalchemy import or_
 from app.services.websocket.channels import ChannelManager
 from app.services.filters import FilterMixin
 from app.services.cache_service import cache_service
@@ -82,6 +84,34 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
         else:
             self.cache_prefix = model.__name__.lower()
 
+    def _apply_tenant_filter(self, query, *, organization_id=None, include_shared=False):
+        """
+        Aplica filtrado por tenant si el modelo tiene organization_id.
+        Si include_shared=True, incluye también registros de la org sistema.
+        Si el modelo no tiene organization_id, la query no se modifica.
+        """
+        if not organization_id or not hasattr(self.model, "organization_id"):
+            return query
+
+        if include_shared:
+            from app.services.organization_service import organization_service
+            # Buscar la org sistema para incluir sus datos compartidos
+            # Usamos import lazy para evitar circular
+            from sqlmodel import Session
+            from app.database import engine
+            with Session(engine) as temp_session:
+                system_org = organization_service.get_system_organization(temp_session)
+            if system_org:
+                query = query.where(or_(
+                    self.model.organization_id == organization_id,
+                    self.model.organization_id == system_org.id,
+                ))
+            else:
+                query = query.where(self.model.organization_id == organization_id)
+        else:
+            query = query.where(self.model.organization_id == organization_id)
+        return query
+
     def get_by_id(self, session: Session, obj_id: int) -> Optional[ModelType]:
         """
         Get an object by ID (with caching).
@@ -115,7 +145,10 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
         self,
         session: Session,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        *,
+        organization_id=None,
+        include_shared: bool = False,
     ) -> List[ModelType]:
         """
         Get all objects with pagination (with caching).
@@ -124,6 +157,8 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
             session: Database session
             skip: Number of records to skip
             limit: Maximum number of records to return
+            organization_id: Filtrar por tenant (opcional)
+            include_shared: Incluir datos de org sistema (opcional)
 
         Returns:
             List of objects
@@ -133,16 +168,19 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
         # Try to get from cache
         cache_key = f"{self.cache_prefix}:list"
         cached = cache_service.get(cache_key, skip=skip, limit=limit)
-        if cached:
-            # Return from cache (convert list of dicts to models)
+        if cached and not organization_id:
             return [self.read_schema(**item) for item in cached]
 
         # Not in cache, get from database
-        statement = select(self.model).offset(skip).limit(limit)
+        statement = select(self.model)
+        statement = self._apply_tenant_filter(
+            statement, organization_id=organization_id, include_shared=include_shared
+        )
+        statement = statement.offset(skip).limit(limit)
         results = list(session.exec(statement).all())
 
-        # Store in cache
-        if results:
+        # Store in cache (solo si no hay filtro de tenant)
+        if results and not organization_id:
             results_dict = [self.read_schema.model_validate(obj).model_dump() for obj in results]
             cache_service.set(cache_key, results_dict, skip=skip, limit=limit)
 
@@ -152,7 +190,10 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
         self,
         session: Session,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        *,
+        organization_id=None,
+        include_shared: bool = False,
     ) -> dict:
         """
         Get all objects with complete pagination metadata (with caching).
@@ -161,37 +202,31 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
             session: Database session
             skip: Number of records to skip (offset)
             limit: Maximum number of records to return
+            organization_id: Filtrar por tenant (opcional)
+            include_shared: Incluir datos de org sistema (opcional)
 
         Returns:
-            Dict with pagination metadata:
-            {
-                "data": [...],        # List of objects
-                "total": 150,         # Total count of records
-                "limit": 100,         # Requested limit
-                "offset": 0,          # Requested offset
-                "has_more": True      # Whether more records exist
-            }
-
-        Cache: Caches complete paginated result including metadata
-
-        Example:
-            result = user_service.get_all_paginated(session, skip=0, limit=10)
-            print(f"Page 1 of {result['total'] // result['limit']}")
-            for user in result['data']:
-                print(user.email)
+            Dict with pagination metadata
         """
         # Try to get from cache
         cache_key = f"{self.cache_prefix}:list:paginated"
         cached = cache_service.get(cache_key, skip=skip, limit=limit)
-        if cached:
+        if cached and not organization_id:
             return cached
 
-        # Not in cache, get total count
+        # Get total count (con filtro de tenant si aplica)
         count_statement = select(func.count()).select_from(self.model)
+        count_statement = self._apply_tenant_filter(
+            count_statement, organization_id=organization_id, include_shared=include_shared
+        )
         total = session.exec(count_statement).one()
 
         # Get paginated data
-        statement = select(self.model).offset(skip).limit(limit)
+        statement = select(self.model)
+        statement = self._apply_tenant_filter(
+            statement, organization_id=organization_id, include_shared=include_shared
+        )
+        statement = statement.offset(skip).limit(limit)
         results = list(session.exec(statement).all())
 
         # Convert to dict for serialization
@@ -206,8 +241,9 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReadSch
             "has_more": (skip + len(results)) < total
         }
 
-        # Store in cache
-        cache_service.set(cache_key, response, skip=skip, limit=limit)
+        # Store in cache (solo sin filtro de tenant)
+        if not organization_id:
+            cache_service.set(cache_key, response, skip=skip, limit=limit)
 
         return response
 

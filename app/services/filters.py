@@ -237,28 +237,18 @@ class FilterMixin:
         results = user_service.filter(session, query_filter)
     """
 
-    def filter(self, session, filters: QueryFilter):
+    def filter(self, session, filters: QueryFilter, *, organization_id=None, include_shared: bool = False):
         """
         Filtra registros basándose en QueryFilter.
 
         Args:
             session: Sesión de base de datos
             filters: Objeto QueryFilter con condiciones, ordenamiento y paginación
+            organization_id: Filtrar por tenant (opcional)
+            include_shared: Incluir datos de org sistema (opcional)
 
         Returns:
             Lista de objetos filtrados
-
-        Example:
-            filters = QueryFilter(
-                conditions=[
-                    Condition(field="email", operator=FilterOperator.CONTAINS, value="gmail"),
-                    Condition(field="is_active", operator=FilterOperator.EQ, value=True)
-                ],
-                order_by="created_at",
-                order_direction="desc",
-                limit=10
-            )
-            users = user_service.filter(session, filters)
         """
         try:
             # Generate cache key from filter parameters
@@ -267,24 +257,30 @@ class FilterMixin:
             filters_json = json.dumps(filters_dict, sort_keys=True, default=str)
             filters_hash = hashlib.md5(filters_json.encode()).hexdigest()[:8]
 
-            # Try to get from cache
-            cached = cache_service.get(cache_prefix, hash=filters_hash)
-            if cached:
-                logger.info(f"Filtrado desde cache: {len(cached)} registros")
-                return cached
+            # Try to get from cache (solo sin filtro de tenant)
+            if not organization_id:
+                cached = cache_service.get(cache_prefix, hash=filters_hash)
+                if cached:
+                    logger.info(f"Filtrado desde cache: {len(cached)} registros")
+                    return cached
 
             # Not in cache, execute query
             builder = QueryBuilder(self.model)
             builder.apply_filters(filters)
             query = builder.build()
 
+            # Aplicar filtro de tenant sobre la query construida
+            if organization_id and hasattr(self.model, "organization_id"):
+                query = self._apply_tenant_filter(
+                    query, organization_id=organization_id, include_shared=include_shared
+                )
+
             results = session.exec(query).all()
             logger.info(f"Filtrado completado: {len(results)} registros encontrados")
 
-            # Store in cache (convert to list of dicts for JSON serialization)
-            if results:
+            # Store in cache (solo sin filtro de tenant)
+            if results and not organization_id:
                 results_list = [dict(obj.__dict__) for obj in results]
-                # Remove SQLAlchemy internal state
                 for item in results_list:
                     item.pop('_sa_instance_state', None)
                 cache_service.set(cache_prefix, results_list, hash=filters_hash)
@@ -331,26 +327,18 @@ class FilterMixin:
             logger.error(f"Error contando registros filtrados: {e}")
             return 0
 
-    def filter_paginated(self, session, filters: QueryFilter) -> dict:
+    def filter_paginated(self, session, filters: QueryFilter, *, organization_id=None, include_shared: bool = False) -> dict:
         """
         Filtra registros y retorna resultado paginado con metadata.
 
         Args:
             session: Sesión de base de datos
             filters: Objeto QueryFilter
+            organization_id: Filtrar por tenant (opcional)
+            include_shared: Incluir datos de org sistema (opcional)
 
         Returns:
-            Dict con 'data', 'total', 'limit', 'offset'
-
-        Example:
-            result = user_service.filter_paginated(session, filters)
-            # {
-            #     "data": [...],
-            #     "total": 150,
-            #     "limit": 10,
-            #     "offset": 0,
-            #     "has_more": True
-            # }
+            Dict con 'data', 'total', 'limit', 'offset', 'has_more'
         """
         # Generate cache key for paginated result
         cache_prefix = f"{self.cache_prefix}:filter:paginated"
@@ -358,15 +346,16 @@ class FilterMixin:
         filters_json = json.dumps(filters_dict, sort_keys=True, default=str)
         filters_hash = hashlib.md5(filters_json.encode()).hexdigest()[:8]
 
-        # Try to get from cache
-        cached = cache_service.get(cache_prefix, hash=filters_hash)
-        if cached:
-            logger.info(f"Resultado paginado desde cache")
-            return cached
+        # Try to get from cache (solo sin filtro de tenant)
+        if not organization_id:
+            cached = cache_service.get(cache_prefix, hash=filters_hash)
+            if cached:
+                logger.info(f"Resultado paginado desde cache")
+                return cached
 
         # Not in cache, execute queries
         total = self.count_filtered(session, filters)
-        data = self.filter(session, filters)
+        data = self.filter(session, filters, organization_id=organization_id, include_shared=include_shared)
 
         result = {
             "data": data,
@@ -376,7 +365,8 @@ class FilterMixin:
             "has_more": (filters.offset + len(data)) < total
         }
 
-        # Store in cache
-        cache_service.set(cache_prefix, result, hash=filters_hash)
+        # Store in cache (solo sin filtro de tenant)
+        if not organization_id:
+            cache_service.set(cache_prefix, result, hash=filters_hash)
 
         return result

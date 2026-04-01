@@ -99,8 +99,4 @@ connection_manager = ConnectionManager()
 # Channel managers for each model
 users_channel = ChannelManager(connection_manager, "users")
 media_channel = ChannelManager(connection_manager, "media")
-
-# Add more channels for other models as needed:
-# posts_channel = ChannelManager(connection_manager, "posts")
-# comments_channel = ChannelManager(connection_manager, "comments")
-# notifications_channel = ChannelManager(connection_manager, "notifications")
+organizations_channel = ChannelManager(connection_manager, "organizations")

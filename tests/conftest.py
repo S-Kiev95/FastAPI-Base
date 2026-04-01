@@ -26,6 +26,7 @@ def engine_fixture():
     from app.models.cors_origin import CorsOrigin  # noqa: F401
     from app.models.metric import ApiMetric  # noqa: F401
     from app.models.task import Task  # noqa: F401
+    from app.models.organization import Organization, Membership  # noqa: F401
     # webhook.py usa SQLAlchemy Base (no SQLModel) — se excluye de tests por ahora
 
     SQLModel.metadata.create_all(engine)
@@ -122,3 +123,77 @@ def sample_users_fixture(client):
         assert response.status_code == 201
         created.append(response.json())
     return created
+
+
+# ---- Fixtures de multi-tenancy ----
+
+@pytest.fixture(name="registered_user_with_org")
+def registered_user_with_org_fixture(client):
+    """Registra un usuario (register crea user + org + membership owner)."""
+    user_data = {
+        "email": "orgowner@example.com",
+        "password": "password123",
+        "name": "Org Owner",
+        "organization_name": "Mi Correduría",
+    }
+    response = client.post("/auth/register", json=user_data)
+    assert response.status_code == 201
+
+    login_response = client.post(
+        "/auth/login",
+        json={"email": user_data["email"], "password": user_data["password"]},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    return {
+        "user": response.json(),
+        "token": token,
+        "headers": {"Authorization": f"Bearer {token}"},
+        "org_slug": "mi-correduria",
+    }
+
+
+@pytest.fixture(name="second_user_with_org")
+def second_user_with_org_fixture(client):
+    """Segundo usuario con su propia org (para tests de aislamiento)."""
+    user_data = {
+        "email": "second@example.com",
+        "password": "password123",
+        "name": "Second User",
+        "organization_name": "Otra Correduría",
+    }
+    response = client.post("/auth/register", json=user_data)
+    assert response.status_code == 201
+
+    login_response = client.post(
+        "/auth/login",
+        json={"email": user_data["email"], "password": user_data["password"]},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    return {
+        "user": response.json(),
+        "token": token,
+        "headers": {"Authorization": f"Bearer {token}"},
+        "org_slug": "otra-correduria",
+    }
+
+
+@pytest.fixture(name="system_org")
+def system_org_fixture(session):
+    """Crea la organización sistema para tests."""
+    from app.models.organization import Organization
+
+    org = Organization(
+        name="Sistema",
+        slug="system",
+        plan="system",
+        is_system=True,
+        is_active=True,
+    )
+    session.add(org)
+    session.commit()
+    session.refresh(org)
+    return org

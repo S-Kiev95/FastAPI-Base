@@ -21,12 +21,14 @@ from app.routes.cors import router as cors_router
 from app.routes.metrics import router as metrics_router
 from app.routes.tasks import router as tasks_router
 from app.routes.webhooks import router as webhooks_router
+from app.routes.organizations import router as organizations_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.services.task_notification_service import start_task_notification_listener
 from app.utils.logger import get_structured_logger
+from app.core.seed import seed_all
 
 # Setup logger
 logger = get_structured_logger(__name__)
@@ -49,6 +51,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Initializing database")
         init_db()
+        seed_all()
 
     # Start task notification listener (if Redis is enabled)
     if settings.REDIS_ENABLED:
@@ -120,6 +123,7 @@ app.include_router(cors_router)
 app.include_router(metrics_router)
 app.include_router(tasks_router)
 app.include_router(webhooks_router)
+app.include_router(organizations_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics

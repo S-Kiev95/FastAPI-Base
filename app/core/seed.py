@@ -10,6 +10,10 @@ from app.models.role import (
     Role, Permission, RolePermission,
     DefaultRole, PermissionAction, PermissionResource
 )
+from app.models.organization import Organization, Membership, MembershipRole
+from app.models.user import User
+from app.core.security import get_password_hash
+from app.config import settings
 
 
 def seed_permissions(session: Session) -> dict[str, Permission]:
@@ -203,5 +207,100 @@ def seed_rbac():
         print("="*60 + "\n")
 
 
+def seed_system_organization(session: Session) -> None:
+    """
+    Crea la organización sistema para datos compartidos (ej: aseguradoras).
+    También crea el superadmin si SYSTEM_ADMIN_EMAIL está configurado.
+    Idempotente: seguro de ejecutar múltiples veces.
+    """
+    slug = settings.SYSTEM_ORG_SLUG
+
+    # Verificar si ya existe
+    stmt = select(Organization).where(Organization.slug == slug)
+    existing = session.exec(stmt).first()
+
+    if existing:
+        print(f"  [OK] System organization already exists: {slug}")
+        system_org = existing
+    else:
+        system_org = Organization(
+            name="Sistema",
+            slug=slug,
+            plan="system",
+            is_system=True,
+            is_active=True,
+        )
+        session.add(system_org)
+        session.flush()
+        print(f"  + Created system organization: {slug}")
+
+    # Crear superadmin si está configurado
+    admin_email = settings.SYSTEM_ADMIN_EMAIL
+    admin_password = settings.SYSTEM_ADMIN_PASSWORD
+
+    if admin_email and admin_password:
+        stmt = select(User).where(User.email == admin_email)
+        existing_user = session.exec(stmt).first()
+
+        if existing_user:
+            print(f"  [OK] System admin already exists: {admin_email}")
+            admin_user = existing_user
+        else:
+            admin_user = User(
+                email=admin_email,
+                name="System Admin",
+                provider="local",
+                hashed_password=get_password_hash(admin_password),
+                is_active=True,
+                is_verified=True,
+                is_superadmin=True,
+            )
+            session.add(admin_user)
+            session.flush()
+            print(f"  + Created system admin: {admin_email}")
+
+        # Crear membership owner en la org sistema
+        stmt = select(Membership).where(
+            Membership.user_id == admin_user.id,
+            Membership.organization_id == system_org.id,
+        )
+        existing_membership = session.exec(stmt).first()
+
+        if not existing_membership:
+            membership = Membership(
+                user_id=admin_user.id,
+                organization_id=system_org.id,
+                role=MembershipRole.owner,
+            )
+            session.add(membership)
+            print(f"  + Assigned admin as owner of system org")
+
+
+def seed_all():
+    """
+    Seed completo: RBAC + organización sistema.
+    Seguro de ejecutar múltiples veces (idempotente).
+    """
+    print("\n" + "="*60)
+    print("SEEDING DATA")
+    print("="*60 + "\n")
+
+    with Session(engine) as session:
+        print("Creating permissions...")
+        permissions_map = seed_permissions(session)
+
+        print("\nCreating roles and assigning permissions...")
+        roles_map = seed_roles(session, permissions_map)
+
+        print("\nCreating system organization...")
+        seed_system_organization(session)
+
+        session.commit()
+
+        print("\n" + "="*60)
+        print("[SUCCESS] Seeding complete!")
+        print("="*60 + "\n")
+
+
 if __name__ == "__main__":
-    seed_rbac()
+    seed_all()

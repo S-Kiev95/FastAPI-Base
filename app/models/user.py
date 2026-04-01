@@ -28,6 +28,7 @@ class User(SQLModel, table=True):
     # Account status
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)  # Email verification status
+    is_superadmin: bool = Field(default=False)  # Acceso global al admin panel
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -68,10 +69,11 @@ class UserUpdate(SQLModel):
 # Authentication Schemas
 
 class UserRegister(SQLModel):
-    """Schema for user registration (local auth)"""
+    """Schema for user registration (local auth). Crea user + org + membership."""
     email: str
     password: str
     name: Optional[str] = None
+    organization_name: Optional[str] = None  # Si no se pasa, se genera del email
 
 
 class UserLogin(SQLModel):
