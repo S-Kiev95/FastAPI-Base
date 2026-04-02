@@ -86,6 +86,13 @@ class Settings:
     SYSTEM_ADMIN_EMAIL: str = os.getenv("SYSTEM_ADMIN_EMAIL", "")
     SYSTEM_ADMIN_PASSWORD: str = os.getenv("SYSTEM_ADMIN_PASSWORD", "")
 
+    # Billing / Payment Gateways
+    ACTIVE_PAYMENT_GATEWAY: str = os.getenv("ACTIVE_PAYMENT_GATEWAY", "stripe")
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    MERCADOPAGO_ACCESS_TOKEN: str = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
+    MERCADOPAGO_WEBHOOK_SECRET: str = os.getenv("MERCADOPAGO_WEBHOOK_SECRET", "")
+
     @property
     def cors_origins_list(self) -> list:
         """Convert CORS_ORIGINS string to list"""
