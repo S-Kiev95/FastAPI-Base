@@ -1,8 +1,10 @@
 """
-Rutas de billing: checkout, suscripción, cancelación, webhooks, planes.
+Rutas de billing: checkout, suscripción, cancelación, webhooks, planes, pagos, uso.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Optional
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlmodel import Session
 
 from app.database import get_session
@@ -11,6 +13,7 @@ from app.core.tenant import TenantContext, get_current_organization
 from app.models.subscription import (
     SubscriptionRead, CheckoutRequest, PlanTier, PLAN_FEATURES,
 )
+from app.models.payment import PaymentRead
 from app.services.billing.billing_service import billing_service
 
 logger = logging.getLogger(__name__)
@@ -128,6 +131,45 @@ async def cancel_subscription(
         return {"message": "Suscripción cancelada", "subscription": SubscriptionRead.model_validate(sub)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ---- Historial de pagos ----
+
+@router.get("/payments", response_model=list[PaymentRead])
+def list_payments(
+    tenant: TenantContext = Depends(get_current_organization),
+    db: Session = Depends(get_session),
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    """Historial de pagos de la organización (más recientes primero)."""
+    return billing_service.get_payments(
+        db, tenant.organization.id, limit=limit, offset=offset,
+    )
+
+
+@router.get("/payments/{payment_id}", response_model=PaymentRead)
+def get_payment(
+    payment_id: UUID,
+    tenant: TenantContext = Depends(get_current_organization),
+    db: Session = Depends(get_session),
+):
+    """Detalle de un pago específico."""
+    payment = billing_service.get_payment_by_id(db, payment_id, tenant.organization.id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    return payment
+
+
+# ---- Uso actual vs plan ----
+
+@router.get("/usage")
+def get_usage(
+    tenant: TenantContext = Depends(get_current_organization),
+    db: Session = Depends(get_session),
+):
+    """Uso actual de la organización vs límites del plan."""
+    return billing_service.get_usage(db, tenant.organization.id)
 
 
 # ---- Webhooks de pasarelas ----

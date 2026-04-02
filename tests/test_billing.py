@@ -244,3 +244,233 @@ class TestBillingRoutes:
             headers={"x-signature": "test_sig", "content-type": "application/json"},
         )
         assert response.status_code == 200
+
+
+# ============================================================
+# Fase 4.1 — Dashboard de billing: pagos, detalle, uso
+# ============================================================
+
+class TestPaymentModel:
+    """Tests del modelo Payment y operaciones de servicio."""
+
+    def test_record_payment(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Pay Org", slug="pay-org", plan="pro")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        payment = billing_service.create_payment(
+            db=session,
+            organization_id=org.id,
+            subscription_id=sub.id,
+            gateway="stripe",
+            gateway_payment_id="pi_test_123",
+            amount=7900,
+            currency="usd",
+            status="succeeded",
+            description="Pago de suscripción Pro",
+        )
+        assert payment.amount == 7900
+        assert payment.status == "succeeded"
+        assert payment.gateway_payment_id == "pi_test_123"
+
+    def test_get_payments_list(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="List Org", slug="list-org", plan="starter")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+
+        # Crear 3 pagos
+        for i in range(3):
+            billing_service.create_payment(
+                db=session,
+                organization_id=org.id,
+                subscription_id=sub.id,
+                gateway="stripe",
+                gateway_payment_id=f"pi_{i}",
+                amount=2900,
+                currency="usd",
+                status="succeeded",
+                description=f"Pago #{i}",
+            )
+
+        payments = billing_service.get_payments(session, org.id)
+        assert len(payments) == 3
+
+    def test_get_payments_count(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Count Org", slug="count-org", plan="free")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        billing_service.create_payment(
+            db=session, organization_id=org.id, subscription_id=sub.id,
+            gateway="stripe", gateway_payment_id=None, amount=100,
+            currency="usd", status="succeeded", description=None,
+        )
+
+        count = billing_service.get_payments_count(session, org.id)
+        assert count == 1
+
+    def test_get_payments_pagination(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Page Org", slug="page-org", plan="pro")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        for i in range(5):
+            billing_service.create_payment(
+                db=session, organization_id=org.id, subscription_id=sub.id,
+                gateway="stripe", gateway_payment_id=f"pi_p{i}", amount=1000,
+                currency="usd", status="succeeded", description=None,
+            )
+
+        page1 = billing_service.get_payments(session, org.id, limit=2, offset=0)
+        page2 = billing_service.get_payments(session, org.id, limit=2, offset=2)
+        assert len(page1) == 2
+        assert len(page2) == 2
+        assert page1[0].id != page2[0].id
+
+    def test_get_payment_by_id(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Detail Org", slug="detail-org", plan="pro")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        payment = billing_service.create_payment(
+            db=session, organization_id=org.id, subscription_id=sub.id,
+            gateway="stripe", gateway_payment_id="pi_detail", amount=7900,
+            currency="usd", status="succeeded", description=None,
+        )
+
+        found = billing_service.get_payment_by_id(session, payment.id, org.id)
+        assert found is not None
+        assert found.id == payment.id
+
+    def test_get_payment_by_id_wrong_org(self, session):
+        """Un pago de otra org no es visible."""
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org1 = Organization(name="Org A", slug="org-a", plan="pro")
+        org2 = Organization(name="Org B", slug="org-b", plan="pro")
+        session.add_all([org1, org2])
+        session.commit()
+        session.refresh(org1)
+        session.refresh(org2)
+
+        sub1 = billing_service.get_or_create_subscription(session, org1.id)
+        payment = billing_service.create_payment(
+            db=session, organization_id=org1.id, subscription_id=sub1.id,
+            gateway="stripe", gateway_payment_id="pi_iso", amount=7900,
+            currency="usd", status="succeeded", description=None,
+        )
+
+        # Org B no puede ver el pago de Org A
+        found = billing_service.get_payment_by_id(session, payment.id, org2.id)
+        assert found is None
+
+
+class TestUsageEndpoint:
+    """Tests del cálculo de uso vs plan."""
+
+    def test_get_usage_free_plan(self, session):
+        from app.models.organization import Organization, Membership
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Usage Org", slug="usage-org", plan="free")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        # Agregar 2 miembros
+        for uid in [1, 2]:
+            from app.models.user import User
+            user = User(email=f"usage{uid}@test.com", name=f"User{uid}", hashed_password="x")
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            m = Membership(user_id=user.id, organization_id=org.id, role="member")
+            session.add(m)
+        session.commit()
+
+        usage = billing_service.get_usage(session, org.id)
+        assert usage["plan"] == "free"
+        assert usage["members"]["current"] == 2
+        assert usage["members"]["max"] == 3  # free plan
+        assert usage["members"]["unlimited"] is False
+        assert usage["members"]["percentage"] > 0
+
+    def test_get_usage_enterprise_unlimited(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Ent Org", slug="ent-org", plan="enterprise")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        # Forzar plan enterprise en la suscripción
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        sub.plan = "enterprise"
+        session.add(sub)
+        session.commit()
+
+        usage = billing_service.get_usage(session, org.id)
+        assert usage["plan"] == "enterprise"
+        assert usage["members"]["unlimited"] is True
+        assert usage["members"]["max"] is None
+
+    def test_usage_includes_features(self, session):
+        from app.models.organization import Organization
+        from app.services.billing.billing_service import billing_service
+
+        org = Organization(name="Feat Org", slug="feat-org", plan="pro")
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+
+        sub = billing_service.get_or_create_subscription(session, org.id)
+        sub.plan = "pro"
+        session.add(sub)
+        session.commit()
+
+        usage = billing_service.get_usage(session, org.id)
+        assert "webhooks" in usage["features"]
+        assert "priority_support" in usage["features"]
+
+
+class TestBillingDashboardRoutes:
+    """Tests de rutas HTTP de dashboard de billing."""
+
+    def test_payments_endpoint_exists(self, client):
+        """GET /billing/payments existe (requiere org context)."""
+        response = client.get("/billing/payments")
+        # Sin auth/org debería dar error, no 404
+        assert response.status_code in (401, 403, 422)
+
+    def test_usage_endpoint_exists(self, client):
+        """GET /billing/usage existe (requiere org context)."""
+        response = client.get("/billing/usage")
+        assert response.status_code in (401, 403, 422)

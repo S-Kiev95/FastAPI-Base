@@ -420,6 +420,49 @@ class Subscription(SQLModel, table=True):
 
 ---
 
+## Fase 4.1 — Dashboard de billing (pagos, facturas y uso)
+
+**Objetivo:** Persistir historial de pagos desde webhooks y exponer endpoints de consulta para dashboard de billing por organización.
+
+### 4.1.1 Modelo Payment
+
+```python
+class Payment(SQLModel, table=True):
+    __tablename__ = "payments"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    subscription_id: uuid.UUID = Field(foreign_key="subscriptions.id", index=True)
+    gateway: str                        # "stripe" | "mercadopago"
+    gateway_payment_id: str | None      # ID externo del pago
+    amount: int                         # Monto en centavos
+    currency: str = "usd"
+    status: str                         # "succeeded" | "failed" | "pending" | "refunded"
+    description: str | None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+```
+
+### 4.1.2 Endpoints de dashboard
+
+```
+GET  /billing/payments                  → historial de pagos de la org (paginado)
+GET  /billing/payments/{id}             → detalle de un pago
+GET  /billing/usage                     → uso actual vs límites del plan (miembros, storage)
+GET  /billing/invoices/upcoming         → próximo cobro estimado
+```
+
+### 4.1.3 Registro de pagos desde webhooks
+
+Al procesar `payment.success` en `BillingService.process_webhook()`, crear un registro `Payment`. Esto alimenta el historial sin consultar la pasarela.
+
+### 4.1.4 Cálculo de uso
+
+Endpoint `/billing/usage` consulta:
+- Miembros activos en la org (`COUNT(memberships)`) vs `max_members` del plan
+- Storage usado (si hay media asociado a la org) vs `max_storage_mb`
+- Retorna porcentajes de uso para el frontend.
+
+---
+
 ## Fase 5 — Feature flags y límites por plan
 
 **Objetivo:** Controlar qué funcionalidades están disponibles según el plan de la organización.
@@ -622,6 +665,7 @@ worker:
 | 3 | Fase 2 — Auth mejorada | 2-3 días | Invitaciones, Admin |
 | 4 | Fase 3 — Emails | 2-3 días | Invitaciones, Billing |
 | 5 | Fase 4 — Billing | 3-5 días | Feature flags |
+| 5.5 | Fase 4.1 — Dashboard billing | 1-2 días | Admin panel |
 | 6 | Fase 5 — Feature flags | 1-2 días | — |
 | 7 | Fase 6 — Admin panel | Variable (depende de Svelte) | — |
 | 8 | Fase 7 — Observabilidad | 1 día | Producción |
