@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Cambio de plan{% endblock %}
+
+{% block header_title %}Cambio de plan{% endblock %}
+
+{% block content %}
+<h2>Hola {{ name }},</h2>
+
+<p>Tu plan ha sido actualizado exitosamente.</p>
+
+<div class="info-box">
+    <p style="margin: 0 0 8px 0;"><strong>Plan anterior:</strong> {{ old_plan }}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Nuevo plan:</strong> {{ new_plan }}</p>
+    <p style="margin: 0;"><strong>Efectivo desde:</strong> {{ effective_date }}</p>
+</div>
+
+<p>Los cambios en tu plan ya estan activos. Si tienes alguna pregunta sobre las funcionalidades incluidas en tu nuevo plan, no dudes en contactarnos.</p>
+
+<div class="divider"></div>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

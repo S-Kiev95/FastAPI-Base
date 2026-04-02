@@ -140,25 +140,16 @@ async def create_invitation(
         session, tenant.org_id, data.email, data.role, current_user.id,
     )
 
-    # Intentar enviar email de invitación
+    # Enviar email de invitación (via queue o directo)
     try:
         from app.services.email_service import email_service
         accept_url = f"{settings.FRONTEND_URL}/accept-invitation?token={raw_token}"
-        import asyncio
-        asyncio.get_event_loop().create_task(
-            email_service.send_template_email(
-                to=data.email,
-                subject=f"Invitación a {tenant.organization.name}",
-                template_name="invitation.html",
-                context={
-                    "org_name": tenant.organization.name,
-                    "inviter_name": current_user.name or current_user.email,
-                    "role": data.role,
-                    "accept_url": accept_url,
-                    "expire_hours": settings.INVITATION_EXPIRE_HOURS,
-                    "app_name": settings.API_TITLE,
-                },
-            )
+        await email_service.send_invitation_email(
+            to=data.email,
+            org_name=tenant.organization.name,
+            inviter_name=current_user.name or current_user.email,
+            role=data.role,
+            accept_url=accept_url,
         )
     except Exception as e:
         logger.warning(f"No se pudo enviar email de invitación: {e}")

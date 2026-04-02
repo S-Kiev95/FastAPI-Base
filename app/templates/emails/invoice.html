@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Factura {{ invoice_number }}{% endblock %}
+
+{% block header_title %}Factura{% endblock %}
+
+{% block content %}
+<h2>Hola {{ name }},</h2>
+
+<p>Se ha generado una nueva factura para tu cuenta.</p>
+
+<div class="info-box">
+    <p style="margin: 0 0 8px 0;"><strong>Factura:</strong> {{ invoice_number }}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Monto:</strong> {{ amount }}</p>
+    <p style="margin: 0;"><strong>Vencimiento:</strong> {{ due_date }}</p>
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ invoice_url }}" class="button">Ver factura</a>
+</div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Si el boton no funciona, copia y pega este enlace en tu navegador:<br>
+    <a href="{{ invoice_url }}" style="color: #667eea; word-break: break-all;">{{ invoice_url }}</a>
+</p>
+
+<div class="divider"></div>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

@@ -100,8 +100,8 @@ async def register(
     )
     session.refresh(user)
 
-    # Intentar enviar email de verificación
-    _try_send_verification_email(user.email, user.name)
+    # Enviar email de verificación (encolado o directo)
+    await _send_verification_email(user.email, user.name)
 
     # Broadcast via WebSocket
     user_dict = UserRead.model_validate(user).model_dump()
@@ -287,7 +287,7 @@ async def resend_verification_email(
     if user.is_verified:
         return {"message": "El email ya está verificado"}
 
-    _try_send_verification_email(user.email, user.name)
+    await _send_verification_email(user.email, user.name)
     return {"message": "Si el email está registrado, se envió un correo de verificación"}
 
 
@@ -328,7 +328,7 @@ async def forgot_password(
     user = user_service.get_user_by_email(session, body.email)
     # Siempre retornar el mismo mensaje para no revelar si el email existe
     if user and user.provider == "local":
-        _try_send_password_reset_email(user.email, user.name)
+        await _send_password_reset_email(user.email, user.name)
     return {"message": "Si el email está registrado, se envió un correo de recuperación"}
 
 
@@ -385,29 +385,23 @@ async def accept_invitation(
 
 # --- Helpers ---
 
-def _try_send_verification_email(email: str, name: Optional[str]) -> None:
-    """Intenta enviar email de verificación. Falla silenciosamente si SMTP no está configurado."""
+async def _send_verification_email(email: str, name: Optional[str]) -> None:
+    """Envía email de verificación via queue (o directo si Redis no está)."""
     try:
         from app.services.email_service import email_service
         token = create_verification_token(email)
         verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-        import asyncio
-        asyncio.get_event_loop().create_task(
-            email_service.send_verification_email(email, name or email, verification_url)
-        )
+        await email_service.send_verification_email(email, name or email, verification_url)
     except Exception as e:
         logger.warning(f"No se pudo enviar email de verificación: {e}")
 
 
-def _try_send_password_reset_email(email: str, name: Optional[str]) -> None:
-    """Intenta enviar email de reset. Falla silenciosamente si SMTP no está configurado."""
+async def _send_password_reset_email(email: str, name: Optional[str]) -> None:
+    """Envía email de reset via queue (o directo si Redis no está)."""
     try:
         from app.services.email_service import email_service
         token = create_password_reset_token(email)
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-        import asyncio
-        asyncio.get_event_loop().create_task(
-            email_service.send_password_reset_email(email, name or email, reset_url)
-        )
+        await email_service.send_password_reset_email(email, name or email, reset_url)
     except Exception as e:
         logger.warning(f"No se pudo enviar email de reset: {e}")
