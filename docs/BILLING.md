@@ -68,8 +68,9 @@ class PaymentGateway(ABC):
 
 ### Implementaciones actuales
 
-- **StripeGateway** (`stripe_gateway.py`) — Stub, retorna datos simulados. Para producción: instalar `stripe` SDK y reemplazar stubs con llamadas reales.
-- **MercadoPagoGateway** (`mercadopago_gateway.py`) — Stub. Para producción: usar API REST de MercadoPago con HMAC-SHA256 para webhooks.
+- **StripeGateway** (`stripe_gateway.py`) — Stub. Para producción: instalar `stripe` SDK. Webhooks verificados con `stripe-signature` header.
+- **MercadoPagoGateway** (`mercadopago_gateway.py`) — Stub. Para producción: usar API REST de MercadoPago. Webhooks verificados con HMAC-SHA256 (`x-signature` header).
+- **PolarGateway** (`polar_gateway.py`) — Stub. Para producción: usar `polar-python` SDK o API REST (`api.polar.sh/v1`). Webhooks usan [Standard Webhooks](https://www.standardwebhooks.io/) con HMAC (`webhook-signature` header). Auth via Organization Access Tokens (`polar_oat_...`).
 
 ### Agregar una nueva pasarela
 
@@ -97,6 +98,7 @@ No se necesita modificar rutas, servicio ni modelos.
 | GET | `/billing/usage` | Sí + Org | Uso actual vs límites del plan |
 | POST | `/billing/webhooks/stripe` | No* | Recibe eventos de Stripe |
 | POST | `/billing/webhooks/mercadopago` | No* | Recibe eventos de MercadoPago |
+| POST | `/billing/webhooks/polar` | No* | Recibe eventos de Polar.sh |
 
 *Los webhooks no requieren JWT pero verifican firma de la pasarela.
 
@@ -125,7 +127,7 @@ Content-Type: application/json
 
 ```env
 # Pasarela activa por defecto
-ACTIVE_PAYMENT_GATEWAY=stripe    # "stripe" | "mercadopago"
+ACTIVE_PAYMENT_GATEWAY=stripe    # "stripe" | "mercadopago" | "polar"
 
 # Stripe
 STRIPE_SECRET_KEY=sk_live_...
@@ -134,6 +136,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 # MercadoPago
 MERCADOPAGO_ACCESS_TOKEN=APP_USR-...
 MERCADOPAGO_WEBHOOK_SECRET=...
+
+# Polar.sh
+POLAR_ACCESS_TOKEN=polar_oat_...
+POLAR_WEBHOOK_SECRET=...
 ```
 
 ---
