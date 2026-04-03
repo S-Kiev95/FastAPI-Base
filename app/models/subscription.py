@@ -94,6 +94,7 @@ PLAN_FEATURES = {
         "price_monthly": 0,
         "max_members": 3,
         "max_storage_mb": 100,
+        "api_rate_limit": 100,  # requests/hora
         "features": ["basic_crud", "email_support"],
     },
     PlanTier.starter: {
@@ -101,6 +102,7 @@ PLAN_FEATURES = {
         "price_monthly": 29,
         "max_members": 10,
         "max_storage_mb": 1000,
+        "api_rate_limit": 1000,
         "features": ["basic_crud", "email_support", "api_access", "custom_branding"],
     },
     PlanTier.pro: {
@@ -108,6 +110,7 @@ PLAN_FEATURES = {
         "price_monthly": 79,
         "max_members": 50,
         "max_storage_mb": 10000,
+        "api_rate_limit": 10000,
         "features": ["basic_crud", "email_support", "api_access", "custom_branding", "webhooks", "priority_support"],
     },
     PlanTier.enterprise: {
@@ -115,6 +118,7 @@ PLAN_FEATURES = {
         "price_monthly": None,  # Precio personalizado
         "max_members": None,  # Sin límite
         "max_storage_mb": None,  # Sin límite
+        "api_rate_limit": None,  # Sin límite
         "features": ["basic_crud", "email_support", "api_access", "custom_branding", "webhooks", "priority_support", "sso", "audit_log", "dedicated_support"],
     },
 }

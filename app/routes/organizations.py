@@ -8,6 +8,7 @@ from typing import List
 from app.database import get_session
 from app.core.dependencies import get_current_active_user
 from app.core.tenant import TenantContext, get_current_organization, require_org_role
+from app.core.plan_guards import require_member_limit
 from app.models.user import UserRead
 from app.models.organization import (
     OrganizationRead, OrganizationUpdate,
@@ -79,6 +80,7 @@ async def list_members(
 async def add_member(
     data: MembershipCreate,
     tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    _limit: TenantContext = Depends(require_member_limit()),
     session: Session = Depends(get_session),
 ):
     """Agregar miembro a la organización (requiere admin+)."""
@@ -132,6 +134,7 @@ async def remove_member(
 async def create_invitation(
     data: InvitationCreate,
     tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    _limit: TenantContext = Depends(require_member_limit()),
     current_user: UserRead = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ):
