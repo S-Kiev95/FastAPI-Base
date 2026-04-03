@@ -30,6 +30,7 @@ class PaymentGatewayType(str, Enum):
     """Pasarelas de pago soportadas."""
     stripe = "stripe"
     mercadopago = "mercadopago"
+    polar = "polar"
     none = "none"  # Para plan free sin pasarela
 
 

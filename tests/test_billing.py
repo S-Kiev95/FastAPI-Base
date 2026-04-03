@@ -44,6 +44,12 @@ class TestGatewayFactory:
         gw = get_gateway("mercadopago")
         assert isinstance(gw, MercadoPagoGateway)
 
+    def test_get_polar_gateway(self):
+        from app.services.billing import get_gateway
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = get_gateway("polar")
+        assert isinstance(gw, PolarGateway)
+
     def test_unknown_gateway_raises(self):
         from app.services.billing import get_gateway
         with pytest.raises(ValueError, match="Gateway desconocido"):
@@ -105,6 +111,45 @@ class TestMercadoPagoGatewayStub:
         gw = MercadoPagoGateway("token", "secret")
         url = await gw.create_checkout_url("mp_cus_123", "starter", "http://ok", "http://cancel")
         assert "mercadopago.com" in url
+
+
+class TestPolarGatewayStub:
+    """Verifica que los stubs de Polar.sh retornan datos válidos."""
+
+    @pytest.mark.asyncio
+    async def test_create_customer(self):
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = PolarGateway("polar_oat_test", "whsec_test")
+        customer_id = await gw.create_customer("test@test.com", "Test")
+        assert customer_id.startswith("polar_cus_stub_")
+
+    @pytest.mark.asyncio
+    async def test_create_subscription(self):
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = PolarGateway("polar_oat_test", "whsec_test")
+        result = await gw.create_subscription("polar_cus_123", "pro")
+        assert result["subscription_id"].startswith("polar_sub_stub_")
+        assert result["status"] == "active"
+
+    @pytest.mark.asyncio
+    async def test_cancel_subscription(self):
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = PolarGateway("polar_oat_test", "whsec_test")
+        assert await gw.cancel_subscription("polar_sub_123") is True
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_url(self):
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = PolarGateway("polar_oat_test", "whsec_test")
+        url = await gw.create_checkout_url("polar_cus_123", "pro", "http://ok", "http://cancel")
+        assert "polar.sh" in url
+
+    @pytest.mark.asyncio
+    async def test_handle_webhook(self):
+        from app.services.billing.polar_gateway import PolarGateway
+        gw = PolarGateway("polar_oat_test", "whsec_test")
+        event = await gw.handle_webhook(b"payload", "sig")
+        assert event.type == "webhook.stub"
 
 
 class TestBillingService:
@@ -242,6 +287,15 @@ class TestBillingRoutes:
             "/billing/webhooks/mercadopago",
             content=b'{"test": true}',
             headers={"x-signature": "test_sig", "content-type": "application/json"},
+        )
+        assert response.status_code == 200
+
+    def test_polar_webhook_endpoint_exists(self, client):
+        """POST /billing/webhooks/polar responde (Standard Webhooks)."""
+        response = client.post(
+            "/billing/webhooks/polar",
+            content=b'{"test": true}',
+            headers={"webhook-signature": "test_sig", "content-type": "application/json"},
         )
         assert response.status_code == 200
 

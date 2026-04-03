@@ -206,3 +206,20 @@ async def mercadopago_webhook(
     except Exception as e:
         logger.error(f"Error processing MercadoPago webhook: {e}")
         raise HTTPException(status_code=400, detail="Webhook processing failed")
+
+
+@router.post("/webhooks/polar")
+async def polar_webhook(
+    request: Request,
+    db: Session = Depends(get_session),
+):
+    """Recibe webhooks de Polar.sh. Usa Standard Webhooks (HMAC) para verificación."""
+    payload = await request.body()
+    signature = request.headers.get("webhook-signature", "")
+
+    try:
+        result = await billing_service.process_webhook(db, "polar", payload, signature)
+        return result
+    except Exception as e:
+        logger.error(f"Error processing Polar webhook: {e}")
+        raise HTTPException(status_code=400, detail="Webhook processing failed")
