@@ -23,6 +23,7 @@ from app.routes.tasks import router as tasks_router
 from app.routes.webhooks import router as webhooks_router
 from app.routes.organizations import router as organizations_router
 from app.routes.billing import router as billing_router
+from app.routes.admin import router as admin_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -126,6 +127,7 @@ app.include_router(tasks_router)
 app.include_router(webhooks_router)
 app.include_router(organizations_router)
 app.include_router(billing_router)
+app.include_router(admin_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics
@@ -146,6 +148,12 @@ instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schem
 static_dir = os.path.join(os.path.dirname(__file__), "app", "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Mount admin panel (Svelte build) — html=True sirve index.html para rutas SPA
+admin_build_dir = os.path.join(os.path.dirname(__file__), "app", "admin")
+if os.path.exists(admin_build_dir):
+    app.mount("/admin", StaticFiles(directory=admin_build_dir, html=True), name="admin")
+    logger.info("Admin panel mounted at /admin")
 
 
 @app.get("/", response_class=HTMLResponse)
