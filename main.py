@@ -1,15 +1,27 @@
 import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from sqlmodel import inspect
+from sqlmodel import inspect, text
 from prometheus_fastapi_instrumentator import Instrumentator
 import os
 
+# Sentry — inicializar antes de cualquier import de la app
+import sentry_sdk
 from app.config import settings
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+        release=settings.API_VERSION,
+    )
 from app.database import engine, init_db, get_session
 from app.routes import users_router
 from app.routes.auth import router as auth_router
@@ -149,10 +161,19 @@ static_dir = os.path.join(os.path.dirname(__file__), "app", "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Mount admin panel (Svelte build) — html=True sirve index.html para rutas SPA
+# Mount admin panel (Svelte build) — archivos estáticos + SPA fallback
 admin_build_dir = os.path.join(os.path.dirname(__file__), "app", "admin")
 if os.path.exists(admin_build_dir):
-    app.mount("/admin", StaticFiles(directory=admin_build_dir, html=True), name="admin")
+    from starlette.responses import FileResponse as StarletteFileResponse
+
+    # Servir archivos estáticos del build (_app/, favicon, etc.)
+    app.mount("/admin/_app", StaticFiles(directory=os.path.join(admin_build_dir, "_app")), name="admin_assets")
+
+    # SPA catch-all: cualquier ruta bajo /admin devuelve index.html
+    @app.get("/admin/{full_path:path}", response_class=HTMLResponse)
+    async def admin_spa(full_path: str):
+        return StarletteFileResponse(os.path.join(admin_build_dir, "index.html"))
+
     logger.info("Admin panel mounted at /admin")
 
 
@@ -165,9 +186,57 @@ def root():
 
 
 @app.get("/health")
-def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+async def health_check():
+    """Health check extendido — verifica DB, Redis y reporta versión."""
+    checks: dict = {
+        "status": "ok",
+        "version": settings.API_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # --- Database ---
+    try:
+        from sqlmodel import Session
+        with Session(engine) as session:
+            session.exec(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        checks["database"] = f"error: {exc}"
+        checks["status"] = "degraded"
+
+    # --- Redis ---
+    if settings.REDIS_ENABLED:
+        try:
+            import redis as _redis
+            r = _redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD or None,
+                socket_connect_timeout=2,
+            )
+            r.ping()
+            checks["redis"] = "ok"
+            r.close()
+        except Exception as exc:
+            checks["redis"] = f"error: {exc}"
+            checks["status"] = "degraded"
+    else:
+        checks["redis"] = "disabled"
+
+    # --- Sentry ---
+    checks["sentry"] = "enabled" if settings.SENTRY_DSN else "disabled"
+
+    return checks
+
+
+# Endpoint de debug para verificar que Sentry captura errores (solo dev)
+if settings.ENVIRONMENT != "production":
+    @app.get("/debug/sentry", include_in_schema=False)
+    async def sentry_debug():
+        """Lanza un error intencional para verificar integración con Sentry."""
+        raise RuntimeError("Test Sentry error — this is intentional")
 
 
 def main():
