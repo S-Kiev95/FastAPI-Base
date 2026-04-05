@@ -31,6 +31,8 @@ def engine_fixture():
     from app.models.invitation import Invitation  # noqa: F401
     from app.models.subscription import Subscription  # noqa: F401
     from app.models.payment import Payment  # noqa: F401
+    from app.models.audit_log import AuditLog  # noqa: F401
+    from app.models.api_key import ApiKey  # noqa: F401
     # webhook.py usa SQLAlchemy Base (no SQLModel) — se excluye de tests por ahora
 
     SQLModel.metadata.create_all(engine)

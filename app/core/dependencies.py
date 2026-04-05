@@ -1,16 +1,17 @@
 """
-Authentication dependencies for protecting routes.
-Supports both JWT and OAuth authentication.
+Dependencias de autenticación — soporta JWT y API keys (auth dual).
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session
 from typing import Optional
+from dataclasses import dataclass
 
 from app.database import get_session
 from app.core.security import verify_token
 from app.services.user_service import user_service
 from app.models.user import UserRead
+from app.config import settings
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -21,17 +22,8 @@ async def get_current_user(
     session: Session = Depends(get_session)
 ) -> UserRead:
     """
-    Get current authenticated user from JWT token.
-
-    Args:
-        credentials: HTTP Authorization credentials (Bearer token)
-        session: Database session
-
-    Returns:
-        UserRead: Current user data
-
-    Raises:
-        HTTPException: If token is invalid or user not found
+    Autenticación dual: JWT token o API key.
+    Detecta API keys por el prefijo configurado (ej. sk_live_).
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -39,21 +31,48 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Verify token and get email
     token = credentials.credentials
+
+    # --- API Key auth ---
+    if settings.API_KEYS_ENABLED and token.startswith(settings.API_KEY_PREFIX):
+        from app.services.api_key_service import api_key_service
+
+        api_key = api_key_service.verify_key(session, token)
+        if api_key is None:
+            raise credentials_exception
+
+        user = user_service.get_by_id(session, api_key.user_id)
+        if user is None:
+            raise credentials_exception
+
+        return UserRead.model_validate(user)
+
+    # --- JWT auth ---
     email = verify_token(token)
 
     if email is None:
         raise credentials_exception
 
-    # Get user from database
     user = user_service.get_user_by_email(session, email)
 
     if user is None:
         raise credentials_exception
 
-    # Convert to UserRead
     return UserRead.model_validate(user)
+
+
+@dataclass
+class AuditContext:
+    """Contexto de auditoría extraído del request."""
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
+async def get_audit_context(request: Request) -> AuditContext:
+    """Extrae IP y User-Agent del request para audit logs."""
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else None)
+    ua = request.headers.get("user-agent")
+    return AuditContext(ip_address=ip, user_agent=ua)
 
 
 async def get_current_active_user(

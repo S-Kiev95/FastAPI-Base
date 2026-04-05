@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Column
 from sqlalchemy import Text
+from app.models.mixins import SoftDeleteMixin
 
 # Conditional import for pgvector support
 try:
@@ -16,7 +17,7 @@ except ImportError:
     Vector = None
 
 
-class Media(SQLModel, table=True):
+class Media(SoftDeleteMixin, SQLModel, table=True):
     """
     Media model for storing file metadata.
     The actual file is stored in S3/MinIO or local filesystem.

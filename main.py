@@ -36,6 +36,8 @@ from app.routes.webhooks import router as webhooks_router
 from app.routes.organizations import router as organizations_router
 from app.routes.billing import router as billing_router
 from app.routes.admin import router as admin_router
+from app.routes.audit import router as audit_router
+from app.routes.api_keys import router as api_keys_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -140,6 +142,8 @@ app.include_router(webhooks_router)
 app.include_router(organizations_router)
 app.include_router(billing_router)
 app.include_router(admin_router)
+app.include_router(audit_router)
+app.include_router(api_keys_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics

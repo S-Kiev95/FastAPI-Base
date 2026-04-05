@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional
 from enum import Enum
 from sqlmodel import Field, SQLModel, UniqueConstraint
+from app.models.mixins import SoftDeleteMixin
 
 
 class MembershipRole(str, Enum):
@@ -47,7 +48,7 @@ def slugify(text: str) -> str:
 
 # --- Modelos de tabla ---
 
-class Organization(SQLModel, table=True):
+class Organization(SoftDeleteMixin, SQLModel, table=True):
     __tablename__ = "organizations"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

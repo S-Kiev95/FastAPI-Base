@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
+from app.models.mixins import SoftDeleteMixin
 
 
-class User(SQLModel, table=True):
+class User(SoftDeleteMixin, SQLModel, table=True):
     """
     User model supporting dual authentication:
     - OAuth providers (Google, GitHub, etc.)

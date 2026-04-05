@@ -15,6 +15,16 @@ from sqlmodel import SQLModel
 from app.models.user import User  # noqa: F401
 from app.models.media import Media  # noqa: F401
 from app.models.role import Role, Permission, UserRole, RolePermission  # noqa: F401
+from app.models.cors_origin import CorsOrigin  # noqa: F401
+from app.models.metric import ApiMetric  # noqa: F401
+from app.models.task import Task  # noqa: F401
+from app.models.organization import Organization, Membership  # noqa: F401
+from app.models.refresh_token import RefreshToken  # noqa: F401
+from app.models.invitation import Invitation  # noqa: F401
+from app.models.subscription import Subscription  # noqa: F401
+from app.models.payment import Payment  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.api_key import ApiKey  # noqa: F401
 
 # Import config to get DATABASE_URL from .env
 from app.config import settings

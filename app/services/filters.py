@@ -269,6 +269,10 @@ class FilterMixin:
             builder.apply_filters(filters)
             query = builder.build()
 
+            # Excluir registros soft-deleted
+            if hasattr(self, '_apply_soft_delete_filter'):
+                query = self._apply_soft_delete_filter(query)
+
             # Aplicar filtro de tenant sobre la query construida
             if organization_id and hasattr(self.model, "organization_id"):
                 query = self._apply_tenant_filter(
@@ -319,6 +323,11 @@ class FilterMixin:
                 builder._apply_conditions(count_filters.conditions, count_filters.operator)
 
             query = builder.build()
+
+            # Excluir registros soft-deleted
+            if hasattr(self, '_apply_soft_delete_filter'):
+                query = self._apply_soft_delete_filter(query)
+
             results = session.exec(query).all()
 
             return len(results)

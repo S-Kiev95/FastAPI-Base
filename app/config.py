@@ -86,6 +86,14 @@ class Settings:
     SYSTEM_ADMIN_EMAIL: str = os.getenv("SYSTEM_ADMIN_EMAIL", "")
     SYSTEM_ADMIN_PASSWORD: str = os.getenv("SYSTEM_ADMIN_PASSWORD", "")
 
+    # SaaS Features
+    SOFT_DELETE_ENABLED: bool = os.getenv("SOFT_DELETE_ENABLED", "True").lower() == "true"
+    AUDIT_LOG_ENABLED: bool = os.getenv("AUDIT_LOG_ENABLED", "True").lower() == "true"
+    API_KEYS_ENABLED: bool = os.getenv("API_KEYS_ENABLED", "True").lower() == "true"
+    API_KEY_PREFIX: str = os.getenv("API_KEY_PREFIX", "sk_live_")
+    GDPR_EXPORT_ENABLED: bool = os.getenv("GDPR_EXPORT_ENABLED", "True").lower() == "true"
+    ACCOUNT_DELETION_GRACE_DAYS: int = int(os.getenv("ACCOUNT_DELETION_GRACE_DAYS", "30"))
+
     # Observability
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
     SENTRY_TRACES_SAMPLE_RATE: float = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))

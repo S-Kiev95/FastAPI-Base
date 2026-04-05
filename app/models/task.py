@@ -5,9 +5,10 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
+from app.models.mixins import SoftDeleteMixin
 
 
-class Task(SQLModel, table=True):
+class Task(SoftDeleteMixin, SQLModel, table=True):
     """
     Tracks the status of async tasks (media processing, email sending, etc.)
 
