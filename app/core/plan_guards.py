@@ -102,7 +102,7 @@ def require_member_limit():
 def require_storage_limit():
     """
     Dependency factory que verifica que la org no haya excedido max_storage_mb.
-    Actualmente retorna siempre OK porque Media no tiene organization_id todavía.
+    Calcula el almacenamiento sumando file_size de Media con organization_id.
 
     Uso:
         @router.post("/orgs/{org_slug}/upload")
@@ -118,17 +118,25 @@ def require_storage_limit():
         features = _get_plan_features(db, tenant.org_id)
         max_storage = features.get("max_storage_mb")
 
-        # None = ilimitado
+        # None = ilimitado (enterprise)
         if max_storage is None:
             return tenant
 
-        # TODO: calcular storage real cuando Media tenga organization_id
-        current_mb = 0
+        from app.models.media import Media
+
+        total_bytes = db.exec(
+            select(func.coalesce(func.sum(Media.file_size), 0)).where(
+                Media.organization_id == str(tenant.org_id),
+                Media.deleted_at.is_(None),
+            )
+        ).one()
+
+        current_mb = total_bytes / (1024 * 1024)
 
         if current_mb >= max_storage:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail=f"Límite de storage alcanzado ({current_mb}/{max_storage} MB). Actualizá tu plan.",
+                detail=f"Límite de storage alcanzado ({current_mb:.1f}/{max_storage} MB). Actualizá tu plan.",
             )
         return tenant
 
