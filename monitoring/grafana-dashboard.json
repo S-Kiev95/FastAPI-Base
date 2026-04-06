@@ -1,0 +1,312 @@
+{
+  "dashboard": {
+    "title": "FastAPI SaaS Backend - Production Monitoring",
+    "description": "Dashboard de monitoreo completo para FastAPI backend con métricas de Prometheus",
+    "tags": ["fastapi", "saas", "backend", "production"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Request Rate (req/s)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(fastapi_requests_total[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      },
+      {
+        "title": "Error Rate (%)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(fastapi_requests_total{status=~\"5..\"}[5m])) / sum(rate(fastapi_requests_total[5m])) * 100",
+            "legendFormat": "5xx Error Rate"
+          },
+          {
+            "expr": "sum(rate(fastapi_requests_total{status=~\"4..\"}[5m])) / sum(rate(fastapi_requests_total[5m])) * 100",
+            "legendFormat": "4xx Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 5, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Request Latency (p50, p95, p99)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(fastapi_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(fastapi_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(fastapi_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      },
+      {
+        "title": "Active Requests",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "targets": [
+          {
+            "expr": "fastapi_requests_in_progress",
+            "legendFormat": "Active Requests"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "title": "Cache Hit Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "expr": "sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m]))) * 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "WebSocket Connections",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+        "targets": [
+          {
+            "expr": "websocket_connections_active"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            }
+          }
+        }
+      },
+      {
+        "title": "DB Connections",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+        "targets": [
+          {
+            "expr": "db_connections_active"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "ARQ Queue Length",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 16 },
+        "targets": [
+          {
+            "expr": "arq_queue_length"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 100, "color": "yellow" },
+                { "value": 500, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Requests by Endpoint",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum by (path, method) (rate(fastapi_requests_total[5m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true
+              },
+              "indexByName": {
+                "path": 0,
+                "method": 1,
+                "Value": 2
+              },
+              "renameByName": {
+                "path": "Endpoint",
+                "method": "Method",
+                "Value": "Req/s"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "title": "Error Details",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum by (path, status) (rate(fastapi_requests_total{status=~\"4..|5..\"}[5m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true
+              },
+              "indexByName": {
+                "path": 0,
+                "status": 1,
+                "Value": 2
+              },
+              "renameByName": {
+                "path": "Endpoint",
+                "status": "Status",
+                "Value": "Errors/s"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes",
+            "legendFormat": "RSS Memory"
+          },
+          {
+            "expr": "process_virtual_memory_bytes",
+            "legendFormat": "Virtual Memory"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "title": "CPU Usage",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+            "legendFormat": "CPU Usage"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100
+          }
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "green"
+        }
+      ]
+    },
+    "templating": {
+      "list": []
+    }
+  },
+  "overwrite": true
+}
