@@ -43,6 +43,7 @@ from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.logging import LoggingMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.task_notification_service import start_task_notification_listener
 from app.utils.logger import get_structured_logger
 from app.core.seed import seed_all
@@ -113,6 +114,14 @@ app.add_middleware(
 
 # Add logging middleware (should be first to capture all requests)
 app.add_middleware(LoggingMiddleware)
+
+# Add security headers (HSTS solo en producción)
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    enable_hsts=(settings.ENVIRONMENT == "production"),
+    enable_csp=True,
+)
+logger.info("Security headers enabled", hsts=settings.ENVIRONMENT == "production")
 
 # Add metrics middleware to collect API metrics
 app.add_middleware(MetricsMiddleware)

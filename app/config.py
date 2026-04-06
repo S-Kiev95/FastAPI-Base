@@ -99,6 +99,9 @@ class Settings:
     SENTRY_TRACES_SAMPLE_RATE: float = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 
+    # Security
+    ENFORCE_STRONG_PASSWORDS: bool = os.getenv("ENFORCE_STRONG_PASSWORDS", "False").lower() == "true"
+
     # Billing / Payment Gateways
     ACTIVE_PAYMENT_GATEWAY: str = os.getenv("ACTIVE_PAYMENT_GATEWAY", "stripe")
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")

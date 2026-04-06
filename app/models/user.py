@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional, List
+import re
 from sqlmodel import Field, SQLModel, Relationship
+from pydantic import field_validator
 from app.models.mixins import SoftDeleteMixin
 
 
@@ -76,6 +78,50 @@ class UserRegister(SQLModel):
     password: str
     name: Optional[str] = None
     organization_name: Optional[str] = None  # Si no se pasa, se genera del email
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Valida formato y bloquea dominios temporales."""
+        from app.config import settings
+
+        v = v.lower().strip()
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError("Formato de email inválido")
+
+        # Bloquear dominios temporales (solo si enforcement está habilitado)
+        if settings.ENFORCE_STRONG_PASSWORDS:
+            disposable = ["tempmail.com", "throwaway.email", "guerrillamail.com", "mailinator.com"]
+            domain = v.split("@")[1]
+            if domain in disposable:
+                raise ValueError("No se permiten emails temporales")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Valida fortaleza del password (opcional via ENFORCE_STRONG_PASSWORDS)."""
+        from app.config import settings
+
+        # Skip validation si no está habilitado (útil para testing)
+        if not settings.ENFORCE_STRONG_PASSWORDS:
+            return v
+
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("La contraseña debe contener al menos una mayúscula")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("La contraseña debe contener al menos una minúscula")
+        if not re.search(r"\d", v):
+            raise ValueError("La contraseña debe contener al menos un número")
+
+        # Passwords comunes bloqueados
+        common = ["password", "12345678", "qwerty", "abc123", "password123"]
+        if v.lower() in common:
+            raise ValueError("Contraseña demasiado común")
+        return v
 
 
 class UserLogin(SQLModel):

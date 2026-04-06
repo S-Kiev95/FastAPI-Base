@@ -19,8 +19,11 @@ class TestRateLimitMiddleware:
         # Path con prefijo
         assert middleware._get_limit_for_path("/tasks/123") == (50, 60)
 
+        # Auth endpoint con límite específico (anti brute-force)
+        assert middleware._get_limit_for_path("/auth/login") == (5, 300)
+
         # Path sin límite específico
-        assert middleware._get_limit_for_path("/auth/login") is None
+        assert middleware._get_limit_for_path("/api/some-endpoint") is None
 
     def test_get_plan_rate_limit(self, session):
         """get_plan_rate_limit() retorna el límite correcto por plan."""

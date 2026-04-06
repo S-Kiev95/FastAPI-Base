@@ -38,10 +38,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.default_window = default_window
         self.exclude_paths = exclude_paths or ["/health", "/metrics", "/docs", "/openapi.json", "/redoc"]
 
-        # Path-specific limits (más restrictivos para endpoints pesados)
+        # Path-specific limits (más restrictivos para endpoints pesados y auth)
         self.path_limits = {
+            # Auth endpoints (prevenir brute force)
+            "/auth/login": (5, 300),       # 5 intentos cada 5 minutos
+            "/auth/register": (3, 3600),   # 3 registros por hora (por IP)
+            "/auth/password-reset": (3, 3600),  # 3 resets por hora
+            # Task endpoints
             "/tasks/": (50, 60),
             "/tasks/email/bulk": (5, 3600),
+            # Media
             "/media/upload": (30, 60),
         }
 
