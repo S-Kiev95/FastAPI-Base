@@ -10,6 +10,7 @@
 		{ href: `${base}/subscriptions`, label: 'Suscripciones', icon: '⊠' },
 		{ href: `${base}/payments`, label: 'Pagos', icon: '⊞' },
 		{ href: `${base}/metrics`, label: 'Métricas', icon: '⊙' },
+		{ href: `${base}/docs`, label: 'Documentación', icon: '📚' },
 	];
 
 	function isActive(href, currentPath) {
