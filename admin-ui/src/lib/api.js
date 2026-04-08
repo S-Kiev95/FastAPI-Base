@@ -85,3 +85,14 @@ export function logout() {
 export function isAuthenticated() {
 	return typeof localStorage !== 'undefined' && !!localStorage.getItem('admin_token');
 }
+
+// ---- Setup Wizard ----
+/**
+ * Check system setup status (no auth required).
+ * Returns { configured, env_file_exists, required_vars_set, missing_vars, ... }
+ */
+export async function getSetupStatus() {
+	const res = await fetch(`${BASE}/setup/status`);
+	if (!res.ok) throw new Error(`Setup status error ${res.status}`);
+	return res.json();
+}
