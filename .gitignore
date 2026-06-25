@@ -57,3 +57,7 @@ app/admin/
 
 # Node
 node_modules/
+
+# SvelteKit (frontend portal-ui) build/generated
+.svelte-kit/
+portal-ui/build/

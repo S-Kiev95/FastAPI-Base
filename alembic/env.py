@@ -25,6 +25,12 @@ from app.models.subscription import Subscription  # noqa: F401
 from app.models.payment import Payment  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.api_key import ApiKey  # noqa: F401
+# Dominio de seguros
+from app.models.seguros import (  # noqa: F401
+    Client, Vehicle, Insurer, Policy, Installment,
+    Claim, ClaimDocument, Workshop, InsurerWorkshop,
+    InsuranceTask, Message,
+)
 
 # Import config to get DATABASE_URL from .env
 from app.config import settings

@@ -33,6 +33,12 @@ def init_db() -> None:
     from app.models.role import Role, Permission, UserRole, RolePermission  # noqa: F401
     from app.models.cors_origin import CorsOrigin  # noqa: F401
     from app.models.metric import ApiMetric  # noqa: F401
+    # Dominio de seguros
+    from app.models.seguros import (  # noqa: F401
+        Client, Vehicle, Insurer, Policy, Installment,
+        Claim, ClaimDocument, Workshop, InsurerWorkshop,
+        InsuranceTask, Message,
+    )
 
     SQLModel.metadata.create_all(engine)
     print("Database tables created successfully")

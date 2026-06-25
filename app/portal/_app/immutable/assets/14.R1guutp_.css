@@ -1,0 +1,1 @@
+.detail-grid.svelte-1d5feoj{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--space-4)}.detail-item.svelte-1d5feoj{display:flex;flex-direction:column;gap:var(--space-1)}.detail-label.svelte-1d5feoj{font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary)}

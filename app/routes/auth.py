@@ -36,6 +36,7 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    org_slug: Optional[str] = None
 
 
 class RefreshRequest(BaseModel):
@@ -169,9 +170,14 @@ async def login(
     session.add(user)
     session.commit()
 
+    # Organización principal del usuario (primera membresía) para el portal
+    orgs = organization_service.get_user_organizations(session, user.id)
+    org_slug = orgs[0].slug if orgs else None
+
     return TokenPair(
         access_token=access_token,
         refresh_token=raw_refresh,
+        org_slug=org_slug,
     )
 
 

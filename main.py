@@ -40,6 +40,7 @@ from app.routes.audit import router as audit_router
 from app.routes.api_keys import router as api_keys_router
 from app.routes.gdpr import router as gdpr_router
 from app.routes.setup import router as setup_router
+from app.routes.seguros import router as seguros_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -157,6 +158,7 @@ app.include_router(audit_router)
 app.include_router(api_keys_router)
 app.include_router(gdpr_router)
 app.include_router(setup_router)
+app.include_router(seguros_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics
@@ -192,6 +194,19 @@ if os.path.exists(admin_build_dir):
         return StarletteFileResponse(os.path.join(admin_build_dir, "index.html"))
 
     logger.info("Admin panel mounted at /admin")
+
+# Mount portal de seguros (Svelte build) — archivos estáticos + SPA fallback
+portal_build_dir = os.path.join(os.path.dirname(__file__), "app", "portal")
+if os.path.exists(portal_build_dir):
+    from starlette.responses import FileResponse as StarletteFileResponse
+
+    app.mount("/app/_app", StaticFiles(directory=os.path.join(portal_build_dir, "_app")), name="portal_assets")
+
+    @app.get("/app/{full_path:path}", response_class=HTMLResponse)
+    async def portal_spa(full_path: str):
+        return StarletteFileResponse(os.path.join(portal_build_dir, "index.html"))
+
+    logger.info("Portal de seguros mounted at /app")
 
 
 @app.get("/", response_class=HTMLResponse)
