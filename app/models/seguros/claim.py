@@ -53,7 +53,7 @@ class Claim(SoftDeleteMixin, SQLModel, table=True):
 
 
 class ClaimCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     poliza_id: int
     aseguradora_id: int
     numero_siniestro: str

@@ -59,10 +59,12 @@ async def get_task(
 @router.post("/", response_model=InsuranceTaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     data: InsuranceTaskCreate,
+    current_user: UserRead = Depends(get_current_active_user),
     tenant: TenantContext = Depends(get_current_organization),
     session: Session = Depends(get_session),
 ):
     data.organization_id = tenant.org_id
+    data.creado_por = current_user.id
     return await insurance_task_service.create(session, data)
 
 

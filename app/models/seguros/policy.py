@@ -61,7 +61,7 @@ class Policy(SoftDeleteMixin, SQLModel, table=True):
 
 
 class PolicyCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     cliente_id: int
     vehiculo_id: Optional[int] = None
     aseguradora_id: int

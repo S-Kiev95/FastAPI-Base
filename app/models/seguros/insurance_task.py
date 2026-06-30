@@ -48,8 +48,8 @@ class InsuranceTask(SoftDeleteMixin, SQLModel, table=True):
 
 
 class InsuranceTaskCreate(SQLModel):
-    organization_id: uuid.UUID
-    creado_por: int
+    organization_id: Optional[uuid.UUID] = None
+    creado_por: Optional[int] = None
     asignado_a: Optional[int] = None
     titulo: str
     descripcion: Optional[str] = None

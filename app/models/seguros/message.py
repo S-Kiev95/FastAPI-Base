@@ -30,8 +30,8 @@ class Message(SQLModel, table=True):
 
 
 class MessageCreate(SQLModel):
-    organization_id: uuid.UUID
-    remitente_id: int
+    organization_id: Optional[uuid.UUID] = None
+    remitente_id: Optional[int] = None
     destinatario_id: int
     asunto: Optional[str] = None
     contenido: str

@@ -42,7 +42,7 @@ class Vehicle(SoftDeleteMixin, SQLModel, table=True):
 
 
 class VehicleCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     cliente_id: int
     marca: str
     modelo: Optional[str] = None

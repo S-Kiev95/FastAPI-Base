@@ -28,8 +28,8 @@ class ClaimDocument(SQLModel, table=True):
 
 
 class ClaimDocumentCreate(SQLModel):
-    organization_id: uuid.UUID
-    siniestro_id: int
+    organization_id: Optional[uuid.UUID] = None
+    siniestro_id: Optional[int] = None
     tipo_documento: str
     recibido: bool = False
     fecha_recepcion: Optional[date] = None

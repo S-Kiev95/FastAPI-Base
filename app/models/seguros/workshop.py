@@ -44,7 +44,7 @@ class Workshop(SoftDeleteMixin, SQLModel, table=True):
 
 
 class WorkshopCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     nombre: str
     direccion: Optional[str] = None
     departamento: str

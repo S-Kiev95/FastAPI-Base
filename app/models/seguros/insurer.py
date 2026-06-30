@@ -31,7 +31,7 @@ class Insurer(SoftDeleteMixin, SQLModel, table=True):
 
 
 class InsurerCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     nombre: str
     telefono: Optional[str] = None
     email: Optional[str] = None

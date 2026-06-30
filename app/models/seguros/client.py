@@ -31,7 +31,7 @@ class Client(SoftDeleteMixin, SQLModel, table=True):
 
 
 class ClientCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     numero_cliente: Optional[str] = None
     nombre: str
     apellido: str

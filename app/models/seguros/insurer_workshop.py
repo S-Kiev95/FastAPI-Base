@@ -29,8 +29,8 @@ class InsurerWorkshop(SQLModel, table=True):
 
 
 class InsurerWorkshopCreate(SQLModel):
-    organization_id: uuid.UUID
-    aseguradora_id: int
+    organization_id: Optional[uuid.UUID] = None
+    aseguradora_id: Optional[int] = None
     taller_id: int
     zona: Optional[str] = None
     prioridad: int = 0

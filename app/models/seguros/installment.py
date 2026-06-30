@@ -30,7 +30,7 @@ class Installment(SQLModel, table=True):
 
 
 class InstallmentCreate(SQLModel):
-    organization_id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
     poliza_id: int
     numero_cuota: int
     monto: float
