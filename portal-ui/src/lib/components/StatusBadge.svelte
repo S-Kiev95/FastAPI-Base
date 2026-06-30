@@ -7,6 +7,8 @@
 		vigente: 'badge-success',
 		vencida: 'badge-danger',
 		cancelada: 'badge-gray',
+		suspendida: 'badge-warning',
+		renovada: 'badge-info',
 		// Siniestros
 		abierto: 'badge-warning',
 		en_tramite: 'badge-info',

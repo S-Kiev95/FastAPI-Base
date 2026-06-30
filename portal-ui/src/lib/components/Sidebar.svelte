@@ -117,14 +117,15 @@
 	}
 
 	.nav-item:hover {
-		background: var(--color-surface-alt);
+		background: var(--color-surface-muted);
 		color: var(--color-text-primary);
 		text-decoration: none;
 	}
 
 	.nav-item.active {
-		background: rgba(37, 99, 235, 0.1);
+		background: var(--color-primary-soft);
 		color: var(--color-primary);
+		font-weight: 600;
 	}
 
 	.nav-icon {

@@ -198,6 +198,6 @@
 
 <style>
 	tr.unread td {
-		background: rgba(37, 99, 235, 0.04);
+		background: var(--color-primary-soft);
 	}
 </style>
