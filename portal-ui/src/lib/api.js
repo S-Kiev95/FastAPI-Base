@@ -99,7 +99,7 @@ export function createClient(data) {
 }
 
 export function updateClient(id, data) {
-	return apiFetch(`${orgBase()}/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+	return apiFetch(`${orgBase()}/clientes/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export function deleteClient(id) {
@@ -115,7 +115,7 @@ export function getClientPolicies(id) {
 }
 
 export function searchClients(q) {
-	return apiFetch(`${orgBase()}/clientes?search=${encodeURIComponent(q)}`);
+	return apiFetch(`${orgBase()}/clientes?q=${encodeURIComponent(q)}`);
 }
 
 /* ── Vehículos ── */
@@ -160,7 +160,7 @@ export function createPolicy(data) {
 }
 
 export function getExpiringPolicies(days = 30) {
-	return apiFetch(`${orgBase()}/polizas/por-vencer?dias=${days}`);
+	return apiFetch(`${orgBase()}/polizas/por-vencer?days=${days}`);
 }
 
 export function renewPolicy(id, data) {
@@ -214,7 +214,7 @@ export function addClaimDocument(id, data) {
 }
 
 export function markDocumentReceived(claimId, docId) {
-	return apiFetch(`${orgBase()}/siniestros/${claimId}/documentos/${docId}/recibido`, { method: 'PUT' });
+	return apiFetch(`${orgBase()}/siniestros/${claimId}/documentos/${docId}/recibido`, { method: 'POST' });
 }
 
 /* ── Talleres ── */
@@ -244,7 +244,7 @@ export function createTask(data) {
 }
 
 export function completeTask(id) {
-	return apiFetch(`${orgBase()}/tareas/${id}/completar`, { method: 'PUT' });
+	return apiFetch(`${orgBase()}/tareas/${id}/completar`, { method: 'POST' });
 }
 
 export function getOverdueTasks() {
@@ -270,7 +270,7 @@ export function getUnreadCount() {
 }
 
 export function markRead(id) {
-	return apiFetch(`${orgBase()}/mensajes/${id}/leer`, { method: 'PUT' });
+	return apiFetch(`${orgBase()}/mensajes/${id}/leer`, { method: 'POST' });
 }
 
 /* ── Dashboard ── */
