@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+import sqlmodel
 
 
 # revision identifiers, used by Alembic.
@@ -62,10 +63,14 @@ def upgrade() -> None:
     op.create_index(op.f('ix_audit_logs_resource_type'), 'audit_logs', ['resource_type'], unique=False)
     op.create_index(op.f('ix_audit_logs_user_id'), 'audit_logs', ['user_id'], unique=False)
     op.add_column('media', sa.Column('deleted_at', sa.DateTime(), nullable=True))
-    op.alter_column('media', 'embedding',
-               existing_type=sa.NUMERIC(precision=512),
-               type_=pgvector.sqlalchemy.vector.VECTOR(dim=512),
-               existing_nullable=True)
+    # embedding -> VECTOR solo en Postgres con pgvector; en SQLite se omite
+    # (la migración d4e5f6g7h8i9 ya fijó el tipo correcto según el dialecto)
+    if op.get_bind().dialect.name == 'postgresql':
+        from pgvector.sqlalchemy import Vector
+        op.alter_column('media', 'embedding',
+                   existing_type=sa.NUMERIC(precision=512),
+                   type_=Vector(512),
+                   existing_nullable=True)
     op.create_index(op.f('ix_media_deleted_at'), 'media', ['deleted_at'], unique=False)
     op.add_column('organizations', sa.Column('deleted_at', sa.DateTime(), nullable=True))
     op.create_index(op.f('ix_organizations_deleted_at'), 'organizations', ['deleted_at'], unique=False)
@@ -86,10 +91,12 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_organizations_deleted_at'), table_name='organizations')
     op.drop_column('organizations', 'deleted_at')
     op.drop_index(op.f('ix_media_deleted_at'), table_name='media')
-    op.alter_column('media', 'embedding',
-               existing_type=pgvector.sqlalchemy.vector.VECTOR(dim=512),
-               type_=sa.NUMERIC(precision=512),
-               existing_nullable=True)
+    if op.get_bind().dialect.name == 'postgresql':
+        from pgvector.sqlalchemy import Vector
+        op.alter_column('media', 'embedding',
+                   existing_type=Vector(512),
+                   type_=sa.NUMERIC(precision=512),
+                   existing_nullable=True)
     op.drop_column('media', 'deleted_at')
     op.drop_index(op.f('ix_audit_logs_user_id'), table_name='audit_logs')
     op.drop_index(op.f('ix_audit_logs_resource_type'), table_name='audit_logs')
