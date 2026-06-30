@@ -10,6 +10,7 @@ class Settings:
 
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+    SQL_ECHO: bool = os.getenv("SQL_ECHO", "False").lower() == "true"  # log de SQL (debug); OFF en prod
 
     # API Configuration
     API_TITLE: str = os.getenv("API_TITLE", "FastAPI Base Template")

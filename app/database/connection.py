@@ -16,7 +16,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 # For SQLite, add check_same_thread=False
 # For production with PostgreSQL/MySQL, remove connect_args
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
+# SQL_ECHO loguea todas las sentencias SQL — útil en debug, ruidoso/lento en prod.
+# Por defecto OFF; activar con SQL_ECHO=True.
+SQL_ECHO = os.getenv("SQL_ECHO", "False").lower() == "true"
+engine = create_engine(DATABASE_URL, echo=SQL_ECHO, connect_args=connect_args)
 
 
 def init_db() -> None:
