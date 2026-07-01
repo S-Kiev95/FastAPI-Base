@@ -88,11 +88,13 @@
 									<td>{inst.numero_cuota ?? inst.numero ?? '—'}</td>
 									<td>{inst.monto?.toLocaleString() ?? '—'}</td>
 									<td>{inst.fecha_vencimiento || '—'}</td>
-									<td><StatusBadge status={inst.estado || 'vencida'} /></td>
+									<td><StatusBadge status={inst.pagada ? 'pagada' : (inst.fecha_vencimiento && new Date(inst.fecha_vencimiento) < new Date() ? 'vencido' : 'pendiente')} /></td>
 									<td>
+										{#if !inst.pagada}
 										<button class="btn btn-success btn-sm" onclick={() => openPayModal(inst)}>
 											Registrar Pago
 										</button>
+										{/if}
 									</td>
 								</tr>
 							{/each}

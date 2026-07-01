@@ -67,16 +67,16 @@
 						<StatusBadge status={policy.estado} />
 					</div>
 					<div class="detail-item">
-						<span class="detail-label">Cliente ID</span>
-						<span>{policy.cliente_id || '—'}</span>
+						<span class="detail-label">Cliente</span>
+						<span>{policy.cliente_nombre || policy.cliente_id || '—'}</span>
 					</div>
 					<div class="detail-item">
-						<span class="detail-label">Vehiculo ID</span>
+						<span class="detail-label">Vehiculo</span>
 						<span>{policy.vehiculo_id || '—'}</span>
 					</div>
 					<div class="detail-item">
-						<span class="detail-label">Aseguradora ID</span>
-						<span>{policy.aseguradora_id || '—'}</span>
+						<span class="detail-label">Aseguradora</span>
+						<span>{policy.aseguradora_nombre || policy.aseguradora_id || '—'}</span>
 					</div>
 					<div class="detail-item">
 						<span class="detail-label">Vigente Desde</span>
@@ -115,7 +115,7 @@
 									<td>{inst.numero_cuota ?? inst.numero ?? '—'}</td>
 									<td>{inst.monto?.toLocaleString() ?? '—'}</td>
 									<td>{inst.fecha_vencimiento || '—'}</td>
-									<td><StatusBadge status={inst.estado} /></td>
+									<td><StatusBadge status={inst.pagada ? 'pagada' : (inst.fecha_vencimiento && new Date(inst.fecha_vencimiento) < new Date() ? 'vencido' : 'pendiente')} /></td>
 									<td>{inst.fecha_pago || '—'}</td>
 								</tr>
 							{/each}
@@ -141,7 +141,7 @@
 							{#each claims as cl}
 								<tr style="cursor:pointer" onclick={() => goto(`${base}/siniestros/${cl.id}`)}>
 									<td class="mono">{cl.numero_siniestro || cl.id}</td>
-									<td>{cl.fecha_siniestro || '—'}</td>
+									<td>{cl.fecha_ocurrencia || '—'}</td>
 									<td>{cl.descripcion?.substring(0, 60) || '—'}</td>
 									<td><StatusBadge status={cl.estado} /></td>
 								</tr>

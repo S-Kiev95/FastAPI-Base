@@ -63,7 +63,7 @@
 				</div>
 				<div class="detail-item">
 					<span class="detail-label">Fecha del Siniestro</span>
-					<span>{claim.fecha_siniestro || '—'}</span>
+					<span>{claim.fecha_ocurrencia || '—'}</span>
 				</div>
 				<div class="detail-item">
 					<span class="detail-label">Estado</span>
