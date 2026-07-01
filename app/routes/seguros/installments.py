@@ -11,6 +11,7 @@ from app.database import get_session
 from app.core.tenant import TenantContext, get_current_organization
 from app.models.seguros.installment import InstallmentRead
 from app.services.seguros.installment_service import installment_service
+from app.services.seguros.enrich import enrich_installments
 
 router = APIRouter(prefix="/cuotas", tags=["cuotas"])
 
@@ -27,7 +28,8 @@ async def list_installments(
     tenant: TenantContext = Depends(get_current_organization),
     session: Session = Depends(get_session),
 ):
-    return installment_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+    installments = installment_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+    return enrich_installments(session, installments)
 
 
 @router.get("/vencidas", response_model=List[InstallmentRead])
@@ -36,7 +38,7 @@ async def get_overdue_installments(
     session: Session = Depends(get_session),
 ):
     """Cuotas vencidas (no pagadas con fecha pasada)."""
-    return installment_service.get_overdue(session, tenant.org_id)
+    return enrich_installments(session, installment_service.get_overdue(session, tenant.org_id))
 
 
 @router.post("/{installment_id}/pagar", response_model=InstallmentRead)

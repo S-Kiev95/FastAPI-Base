@@ -13,6 +13,7 @@ from app.models.seguros.claim import ClaimRead
 from app.services.seguros.policy_service import policy_service
 from app.services.seguros.installment_service import installment_service
 from app.services.seguros.claim_service import claim_service
+from app.services.seguros.enrich import enrich_policies, enrich_installments, enrich_claims
 
 router = APIRouter(prefix="/polizas", tags=["polizas"])
 
@@ -24,7 +25,8 @@ async def list_policies(
     tenant: TenantContext = Depends(get_current_organization),
     session: Session = Depends(get_session),
 ):
-    return policy_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+    policies = policy_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+    return enrich_policies(session, policies)
 
 
 @router.get("/por-vencer", response_model=List[PolicyRead])
@@ -34,7 +36,8 @@ async def get_expiring_policies(
     session: Session = Depends(get_session),
 ):
     """Pólizas que vencen en los próximos N días."""
-    return policy_service.get_expiring_soon(session, tenant.org_id, days=days)
+    policies = policy_service.get_expiring_soon(session, tenant.org_id, days=days)
+    return enrich_policies(session, policies)
 
 
 @router.get("/{policy_id}", response_model=PolicyRead)
@@ -46,7 +49,7 @@ async def get_policy(
     obj = policy_service.get_by_id(session, policy_id)
     if not obj or obj.organization_id != tenant.org_id:
         raise HTTPException(status_code=404, detail="Póliza no encontrada")
-    return obj
+    return enrich_policies(session, [obj])[0]
 
 
 @router.post("/", response_model=PolicyRead, status_code=status.HTTP_201_CREATED)
@@ -112,7 +115,7 @@ async def get_policy_installments(
     session: Session = Depends(get_session),
 ):
     """Cuotas de una póliza."""
-    return installment_service.get_by_policy(session, policy_id)
+    return enrich_installments(session, installment_service.get_by_policy(session, policy_id))
 
 
 @router.get("/{policy_id}/siniestros", response_model=List[ClaimRead])
@@ -122,4 +125,4 @@ async def get_policy_claims(
     session: Session = Depends(get_session),
 ):
     """Siniestros de una póliza."""
-    return claim_service.get_by_policy(session, policy_id)
+    return enrich_claims(session, claim_service.get_by_policy(session, policy_id))

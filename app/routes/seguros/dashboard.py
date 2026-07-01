@@ -9,6 +9,7 @@ from app.database import get_session
 from app.core.tenant import TenantContext, get_current_organization
 from app.models.seguros.policy import PolicyRead
 from app.services.seguros.dashboard_service import dashboard_service
+from app.services.seguros.enrich import enrich_policies
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -30,6 +31,7 @@ async def get_upcoming_expirations(
     session: Session = Depends(get_session),
 ):
     """Pólizas que vencen próximamente."""
-    return dashboard_service.get_upcoming_expirations(
+    policies = dashboard_service.get_upcoming_expirations(
         session, tenant.org_id, days=days, limit=limit
     )
+    return enrich_policies(session, policies)

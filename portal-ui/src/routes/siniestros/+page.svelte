@@ -91,7 +91,7 @@
 								<tr style="cursor:pointer" onclick={() => goto(`${base}/siniestros/${claim.id}`)}>
 									<td class="mono">{claim.numero_siniestro || claim.id}</td>
 									<td class="mono">{claim.poliza_numero || claim.poliza_id || '—'}</td>
-									<td>{claim.fecha_siniestro || '—'}</td>
+									<td>{claim.fecha_ocurrencia || '—'}</td>
 									<td>{claim.descripcion?.substring(0, 80) || '—'}</td>
 									<td><StatusBadge status={claim.estado} /></td>
 								</tr>

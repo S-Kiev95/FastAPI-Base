@@ -95,6 +95,9 @@ class PolicyRead(SQLModel):
     notas: Optional[str]
     created_at: datetime
     updated_at: datetime
+    # Enriquecidos por la ruta (solo lectura)
+    cliente_nombre: Optional[str] = None
+    aseguradora_nombre: Optional[str] = None
 
 
 class PolicyUpdate(SQLModel):

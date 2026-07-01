@@ -11,6 +11,7 @@ from app.models.seguros.claim import ClaimCreate, ClaimRead, ClaimUpdate
 from app.models.seguros.claim_document import ClaimDocumentCreate, ClaimDocumentRead
 from app.services.seguros.claim_service import claim_service
 from app.services.seguros.claim_document_service import claim_document_service
+from app.services.seguros.enrich import enrich_claims
 
 router = APIRouter(prefix="/siniestros", tags=["siniestros"])
 
@@ -24,8 +25,10 @@ async def list_claims(
     session: Session = Depends(get_session),
 ):
     if estado:
-        return claim_service.get_by_status(session, tenant.org_id, estado)
-    return claim_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+        claims = claim_service.get_by_status(session, tenant.org_id, estado)
+    else:
+        claims = claim_service.get_all(session, skip=skip, limit=limit, organization_id=tenant.org_id)
+    return enrich_claims(session, claims)
 
 
 @router.get("/{claim_id}", response_model=ClaimRead)
@@ -37,7 +40,7 @@ async def get_claim(
     obj = claim_service.get_by_id(session, claim_id)
     if not obj or obj.organization_id != tenant.org_id:
         raise HTTPException(status_code=404, detail="Siniestro no encontrado")
-    return obj
+    return enrich_claims(session, [obj])[0]
 
 
 @router.post("/", response_model=ClaimRead, status_code=status.HTTP_201_CREATED)

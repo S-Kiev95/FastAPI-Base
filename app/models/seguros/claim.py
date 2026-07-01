@@ -83,6 +83,10 @@ class ClaimRead(SQLModel):
     observaciones: Optional[str]
     created_at: datetime
     updated_at: datetime
+    # Enriquecidos por la ruta (solo lectura)
+    poliza_numero: Optional[str] = None
+    cliente_nombre: Optional[str] = None
+    aseguradora_nombre: Optional[str] = None
 
 
 class ClaimUpdate(SQLModel):
