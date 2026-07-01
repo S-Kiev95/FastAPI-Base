@@ -11,7 +11,12 @@ from app.models.seguros.claim import ClaimCreate, ClaimRead, ClaimUpdate
 from app.models.seguros.claim_document import ClaimDocumentCreate, ClaimDocumentRead
 from app.services.seguros.claim_service import claim_service
 from app.services.seguros.claim_document_service import claim_document_service
+from app.services.seguros.policy_service import policy_service
 from app.services.seguros.enrich import enrich_claims
+
+from datetime import date
+from sqlmodel import func, select
+from app.models.seguros.claim import Claim
 
 router = APIRouter(prefix="/siniestros", tags=["siniestros"])
 
@@ -50,7 +55,25 @@ async def create_claim(
     session: Session = Depends(get_session),
 ):
     data.organization_id = tenant.org_id
-    return await claim_service.create(session, data)
+
+    # Derivar aseguradora de la póliza si no se envió
+    if not data.aseguradora_id:
+        pol = policy_service.get_by_id(session, data.poliza_id)
+        if not pol or pol.organization_id != tenant.org_id:
+            raise HTTPException(status_code=404, detail="Póliza no encontrada")
+        data.aseguradora_id = pol.aseguradora_id
+
+    # Autogenerar número de siniestro si no se envió: SIN-{año}-{secuencial}
+    if not data.numero_siniestro:
+        year = date.today().year
+        count = session.exec(
+            select(func.count()).select_from(Claim)
+            .where(Claim.organization_id == tenant.org_id)
+        ).one()
+        data.numero_siniestro = f"SIN-{year}-{count + 1:04d}"
+
+    result = await claim_service.create(session, data)
+    return enrich_claims(session, [result])[0]
 
 
 @router.patch("/{claim_id}", response_model=ClaimRead)

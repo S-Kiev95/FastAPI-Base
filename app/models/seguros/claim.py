@@ -55,8 +55,9 @@ class Claim(SoftDeleteMixin, SQLModel, table=True):
 class ClaimCreate(SQLModel):
     organization_id: Optional[uuid.UUID] = None
     poliza_id: int
-    aseguradora_id: int
-    numero_siniestro: str
+    # Se derivan/autogeneran en la ruta si no se envían
+    aseguradora_id: Optional[int] = None
+    numero_siniestro: Optional[str] = None
     fecha_ocurrencia: Optional[date] = None
     fecha_denuncia: Optional[date] = None
     tipo_dano: str = DamageType.dano_propio

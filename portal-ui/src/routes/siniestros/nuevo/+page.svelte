@@ -6,10 +6,10 @@
 
 	let form = $state({
 		poliza_id: '',
-		fecha_siniestro: '',
+		fecha_ocurrencia: '',
 		descripcion: '',
 		monto_reclamado: '',
-		tipo_siniestro: ''
+		tipo_dano: ''
 	});
 	let loading = $state(false);
 	let error = $state('');
@@ -24,6 +24,7 @@
 				poliza_id: parseInt(form.poliza_id),
 				monto_reclamado: form.monto_reclamado ? parseFloat(form.monto_reclamado) : null,
 			};
+			if (!data.tipo_dano) delete data.tipo_dano;
 			await createClaim(data);
 			goto(`${base}/siniestros`);
 		} catch (err) {
@@ -53,20 +54,20 @@
 				</div>
 				<div class="form-group">
 					<label for="fecha_siniestro">Fecha del Siniestro</label>
-					<input id="fecha_siniestro" type="date" bind:value={form.fecha_siniestro} required />
+					<input id="fecha_siniestro" type="date" bind:value={form.fecha_ocurrencia} required />
 				</div>
 			</div>
 
 			<div class="form-row">
 				<div class="form-group">
-					<label for="tipo_siniestro">Tipo de Siniestro</label>
-					<select id="tipo_siniestro" bind:value={form.tipo_siniestro}>
+					<label for="tipo_siniestro">Tipo de Daño</label>
+					<select id="tipo_siniestro" bind:value={form.tipo_dano}>
 						<option value="">Seleccionar...</option>
-						<option value="colision">Colision</option>
-						<option value="robo">Robo</option>
+						<option value="dano_propio">Daño propio</option>
+						<option value="dano_tercero">Daño a tercero</option>
+						<option value="robo_total">Robo total</option>
+						<option value="robo_parcial">Robo parcial</option>
 						<option value="incendio">Incendio</option>
-						<option value="granizo">Granizo</option>
-						<option value="responsabilidad_civil">Responsabilidad Civil</option>
 						<option value="otro">Otro</option>
 					</select>
 				</div>
