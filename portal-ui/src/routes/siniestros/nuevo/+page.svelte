@@ -1,8 +1,9 @@
 <script>
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
-	import { createClaim } from '$lib/api.js';
+	import { createClaim, getPolicies } from '$lib/api.js';
 
 	let form = $state({
 		poliza_id: '',
@@ -11,8 +12,13 @@
 		monto_reclamado: '',
 		tipo_dano: ''
 	});
+	let polizas = $state([]);
 	let loading = $state(false);
 	let error = $state('');
+
+	onMount(async () => {
+		polizas = (await getPolicies().catch(() => [])) || [];
+	});
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -49,8 +55,13 @@
 		<form onsubmit={handleSubmit}>
 			<div class="form-row">
 				<div class="form-group">
-					<label for="poliza_id">Poliza ID</label>
-					<input id="poliza_id" type="number" bind:value={form.poliza_id} required />
+					<label for="poliza_id">Poliza</label>
+					<select id="poliza_id" bind:value={form.poliza_id} required>
+						<option value="">Seleccionar poliza...</option>
+						{#each polizas as p}
+							<option value={p.id}>{p.numero_poliza} — {p.cliente_nombre || ('Cliente ' + p.cliente_id)}</option>
+						{/each}
+					</select>
 				</div>
 				<div class="form-group">
 					<label for="fecha_siniestro">Fecha del Siniestro</label>

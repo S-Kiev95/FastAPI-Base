@@ -1,8 +1,9 @@
 <script>
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
-	import { createPolicy } from '$lib/api.js';
+	import { createPolicy, getClients, getInsurers, getClientVehicles } from '$lib/api.js';
 
 	let form = $state({
 		cliente_id: '',
@@ -16,8 +17,25 @@
 		moneda: 'UYU',
 		total_cuotas: ''
 	});
+	let clientes = $state([]);
+	let aseguradoras = $state([]);
+	let vehiculos = $state([]);
 	let loading = $state(false);
 	let error = $state('');
+
+	onMount(async () => {
+		const [cl, as] = await Promise.all([
+			getClients().catch(() => []),
+			getInsurers().catch(() => [])
+		]);
+		clientes = cl || [];
+		aseguradoras = as || [];
+	});
+
+	async function onClienteChange() {
+		form.vehiculo_id = '';
+		vehiculos = form.cliente_id ? (await getClientVehicles(form.cliente_id).catch(() => [])) : [];
+	}
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -28,7 +46,7 @@
 				...form,
 				cliente_id: parseInt(form.cliente_id),
 				vehiculo_id: form.vehiculo_id ? parseInt(form.vehiculo_id) : null,
-				aseguradora_id: form.aseguradora_id ? parseInt(form.aseguradora_id) : null,
+				aseguradora_id: parseInt(form.aseguradora_id),
 				prima_total: parseFloat(form.prima_total) || 0,
 				total_cuotas: parseInt(form.total_cuotas) || 1
 			};
@@ -56,19 +74,34 @@
 		<form onsubmit={handleSubmit}>
 			<div class="form-row">
 				<div class="form-group">
-					<label for="cliente_id">Cliente ID</label>
-					<input id="cliente_id" type="number" bind:value={form.cliente_id} required />
+					<label for="cliente_id">Cliente</label>
+					<select id="cliente_id" bind:value={form.cliente_id} onchange={onClienteChange} required>
+						<option value="">Seleccionar cliente...</option>
+						{#each clientes as c}
+							<option value={c.id}>{c.nombre} {c.apellido}</option>
+						{/each}
+					</select>
 				</div>
 				<div class="form-group">
-					<label for="vehiculo_id">Vehiculo ID</label>
-					<input id="vehiculo_id" type="number" bind:value={form.vehiculo_id} />
+					<label for="vehiculo_id">Vehiculo</label>
+					<select id="vehiculo_id" bind:value={form.vehiculo_id} disabled={!form.cliente_id}>
+						<option value="">{form.cliente_id ? 'Sin vehiculo' : 'Elegi un cliente primero'}</option>
+						{#each vehiculos as v}
+							<option value={v.id}>{v.marca} {v.modelo || ''} — {v.matricula}</option>
+						{/each}
+					</select>
 				</div>
 			</div>
 
 			<div class="form-row">
 				<div class="form-group">
-					<label for="aseguradora_id">Aseguradora ID</label>
-					<input id="aseguradora_id" type="number" bind:value={form.aseguradora_id} />
+					<label for="aseguradora_id">Aseguradora</label>
+					<select id="aseguradora_id" bind:value={form.aseguradora_id} required>
+						<option value="">Seleccionar aseguradora...</option>
+						{#each aseguradoras as a}
+							<option value={a.id}>{a.nombre}</option>
+						{/each}
+					</select>
 				</div>
 				<div class="form-group">
 					<label for="numero_poliza">Numero de Poliza</label>
@@ -81,10 +114,11 @@
 					<label for="tipo_seguro">Tipo de Seguro</label>
 					<select id="tipo_seguro" bind:value={form.tipo_seguro} required>
 						<option value="">Seleccionar...</option>
-						<option value="automotor">Automotor</option>
+						<option value="auto">Auto</option>
+						<option value="moto">Moto</option>
 						<option value="hogar">Hogar</option>
 						<option value="vida">Vida</option>
-						<option value="salud">Salud</option>
+						<option value="comercio">Comercio</option>
 						<option value="responsabilidad_civil">Responsabilidad Civil</option>
 						<option value="otro">Otro</option>
 					</select>
