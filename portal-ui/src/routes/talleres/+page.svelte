@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import { getWorkshops } from '$lib/api.js';
@@ -58,6 +59,7 @@
 <PortalLayout>
 	<div class="page-header">
 		<h1>Talleres</h1>
+		<a href="{base}/talleres/nuevo" class="btn btn-primary">+ Nuevo Taller</a>
 	</div>
 
 	<div style="margin-bottom: var(--space-4); display: flex; gap: var(--space-3); align-items: center;">

@@ -42,6 +42,7 @@
 <PortalLayout>
 	<div class="page-header">
 		<h1>Aseguradoras</h1>
+		<a href="{base}/aseguradoras/nueva" class="btn btn-primary">+ Nueva Aseguradora</a>
 	</div>
 
 	{#if error}

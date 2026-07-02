@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { getMyTasks, completeTask } from '$lib/api.js';
@@ -72,6 +73,7 @@
 <PortalLayout>
 	<div class="page-header">
 		<h1>Mis Tareas</h1>
+		<a href="{base}/tareas/nueva" class="btn btn-primary">+ Nueva Tarea</a>
 	</div>
 
 	<div style="margin-bottom: var(--space-4); display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap;">
