@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.models.seguros.client import Client
 from app.models.seguros.insurer import Insurer
 from app.models.seguros.policy import Policy
+from app.models.user import User
 
 
 def _ids(values: Iterable) -> set:
@@ -32,6 +33,15 @@ def insurer_names(session: Session, ids: Iterable[int]) -> Dict[int, str]:
         return {}
     rows = session.exec(select(Insurer).where(Insurer.id.in_(ids))).all()
     return {i.id: i.nombre for i in rows}
+
+
+def user_names(session: Session, ids: Iterable[int]) -> Dict[int, str]:
+    """{user_id: 'Nombre' o email si no tiene nombre}"""
+    ids = _ids(ids)
+    if not ids:
+        return {}
+    rows = session.exec(select(User).where(User.id.in_(ids))).all()
+    return {u.id: (u.name or u.email) for u in rows}
 
 
 def policy_map(session: Session, ids: Iterable[int]) -> Dict[int, Policy]:
@@ -70,6 +80,22 @@ def enrich_claims(session: Session, claims: list) -> list:
         d["poliza_numero"] = pol.numero_poliza if pol else None
         d["cliente_nombre"] = cnames.get(pol.cliente_id) if pol else None
         d["aseguradora_nombre"] = inames.get(c.aseguradora_id)
+        out.append(d)
+    return out
+
+
+def enrich_messages(session: Session, messages: list) -> list:
+    """Serializa mensajes agregando remitente_nombre y destinatario_nombre."""
+    from app.models.seguros.message import MessageRead
+    unames = user_names(
+        session,
+        [m.remitente_id for m in messages] + [m.destinatario_id for m in messages],
+    )
+    out = []
+    for m in messages:
+        d = MessageRead.model_validate(m).model_dump()
+        d["remitente_nombre"] = unames.get(m.remitente_id)
+        d["destinatario_nombre"] = unames.get(m.destinatario_id)
         out.append(d)
     return out
 

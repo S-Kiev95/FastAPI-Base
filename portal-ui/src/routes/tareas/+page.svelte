@@ -123,7 +123,7 @@
 										{/if}
 									</td>
 									<td><span class="badge {priorityBadge(task.prioridad)}">{task.prioridad || '—'}</span></td>
-									<td>{task.fecha_limite || '—'}</td>
+									<td>{task.fecha_vencimiento || '—'}</td>
 									<td><StatusBadge status={task.estado} /></td>
 									<td>
 										{#if task.estado !== 'completada'}

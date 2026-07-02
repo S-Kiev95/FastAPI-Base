@@ -11,6 +11,7 @@ from app.core.dependencies import get_current_active_user
 from app.models.user import UserRead
 from app.models.seguros.message import MessageCreate, MessageRead
 from app.services.seguros.message_service import message_service
+from app.services.seguros.enrich import enrich_messages
 
 router = APIRouter(prefix="/mensajes", tags=["mensajes"])
 
@@ -24,7 +25,7 @@ async def get_inbox(
     session: Session = Depends(get_session),
 ):
     """Bandeja de entrada del usuario."""
-    return message_service.get_inbox(session, current_user.id, skip=skip, limit=limit)
+    return enrich_messages(session, message_service.get_inbox(session, current_user.id, skip=skip, limit=limit))
 
 
 @router.get("/enviados", response_model=List[MessageRead])
@@ -36,7 +37,7 @@ async def get_sent(
     session: Session = Depends(get_session),
 ):
     """Mensajes enviados por el usuario."""
-    return message_service.get_sent(session, current_user.id, skip=skip, limit=limit)
+    return enrich_messages(session, message_service.get_sent(session, current_user.id, skip=skip, limit=limit))
 
 
 @router.get("/no-leidos/count")

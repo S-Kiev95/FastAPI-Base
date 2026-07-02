@@ -53,6 +53,9 @@ class MessageRead(SQLModel):
     poliza_id: Optional[int]
     siniestro_id: Optional[int]
     created_at: datetime
+    # Enriquecidos por la ruta (solo lectura)
+    remitente_nombre: Optional[str] = None
+    destinatario_nombre: Optional[str] = None
 
 
 class MessageUpdate(SQLModel):
