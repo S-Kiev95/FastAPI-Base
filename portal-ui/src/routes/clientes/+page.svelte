@@ -84,7 +84,7 @@
 	<div style="margin-bottom: var(--space-4)">
 		<input
 			type="search"
-			placeholder="Buscar clientes por nombre, documento, email..."
+			placeholder="Buscar clientes por nombre, documento, email…"
 			value={searchQuery}
 			oninput={handleSearch}
 			style="width: 100%; max-width: 400px;"

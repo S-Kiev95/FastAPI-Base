@@ -207,7 +207,7 @@
 		{#if vehError}<div class="alert alert-danger">{vehError}</div>{/if}
 		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
 			<button type="button" class="btn btn-ghost" onclick={() => vehModalOpen = false}>Cancelar</button>
-			<button type="submit" class="btn btn-primary" disabled={vehLoading}>{vehLoading ? 'Guardando...' : 'Agregar'}</button>
+			<button type="submit" class="btn btn-primary" disabled={vehLoading}>{vehLoading ? 'Guardando…' : 'Agregar'}</button>
 		</div>
 	</form>
 </Modal>

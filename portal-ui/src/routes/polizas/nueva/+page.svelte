@@ -76,7 +76,7 @@
 				<div class="form-group">
 					<label for="cliente_id">Cliente</label>
 					<select id="cliente_id" bind:value={form.cliente_id} onchange={onClienteChange} required>
-						<option value="">Seleccionar cliente...</option>
+						<option value="">Seleccionar cliente…</option>
 						{#each clientes as c}
 							<option value={c.id}>{c.nombre} {c.apellido}</option>
 						{/each}
@@ -97,7 +97,7 @@
 				<div class="form-group">
 					<label for="aseguradora_id">Aseguradora</label>
 					<select id="aseguradora_id" bind:value={form.aseguradora_id} required>
-						<option value="">Seleccionar aseguradora...</option>
+						<option value="">Seleccionar aseguradora…</option>
 						{#each aseguradoras as a}
 							<option value={a.id}>{a.nombre}</option>
 						{/each}
@@ -113,7 +113,7 @@
 				<div class="form-group">
 					<label for="tipo_seguro">Tipo de Seguro</label>
 					<select id="tipo_seguro" bind:value={form.tipo_seguro} required>
-						<option value="">Seleccionar...</option>
+						<option value="">Seleccionar…</option>
 						<option value="auto">Auto</option>
 						<option value="moto">Moto</option>
 						<option value="hogar">Hogar</option>
@@ -156,7 +156,7 @@
 
 			<div style="display: flex; gap: var(--space-3); margin-top: var(--space-4)">
 				<button class="btn btn-primary" type="submit" disabled={loading}>
-					{loading ? 'Guardando...' : 'Crear Poliza'}
+					{loading ? 'Guardando…' : 'Crear Poliza'}
 				</button>
 			</div>
 		</form>

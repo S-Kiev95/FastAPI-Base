@@ -67,7 +67,7 @@
 
 			<div style="display: flex; gap: var(--space-3); margin-top: var(--space-4)">
 				<button class="btn btn-primary" type="submit" disabled={loading}>
-					{loading ? 'Guardando...' : 'Crear Tarea'}
+					{loading ? 'Guardando…' : 'Crear Tarea'}
 				</button>
 			</div>
 		</form>

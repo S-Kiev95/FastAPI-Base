@@ -35,14 +35,14 @@
 		<form onsubmit={handleLogin}>
 			<div class="form-group">
 				<label for="email">Email</label>
-				<input id="email" type="email" bind:value={email} required placeholder="usuario@ejemplo.com" />
+				<input id="email" name="email" type="email" autocomplete="username" spellcheck="false" bind:value={email} required placeholder="usuario@ejemplo.com" />
 			</div>
 			<div class="form-group">
 				<label for="password">Contrasena</label>
-				<input id="password" type="password" bind:value={password} required />
+				<input id="password" name="password" type="password" autocomplete="current-password" bind:value={password} required />
 			</div>
 			<button class="btn btn-primary" style="width:100%; margin-top: var(--space-4)" disabled={loading}>
-				{loading ? 'Ingresando...' : 'Ingresar'}
+				{loading ? 'Ingresando…' : 'Ingresar'}
 			</button>
 		</form>
 	</div>

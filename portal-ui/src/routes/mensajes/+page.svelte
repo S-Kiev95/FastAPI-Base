@@ -175,7 +175,7 @@
 		<div class="form-group">
 			<label for="destinatario">Destinatario</label>
 			<select id="destinatario" bind:value={composeForm.destinatario_id} required>
-					<option value="">Seleccionar destinatario...</option>
+					<option value="">Seleccionar destinatario…</option>
 					{#each usuarios as u}
 						<option value={u.id}>{u.nombre}</option>
 					{/each}
@@ -197,7 +197,7 @@
 		<div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-4)">
 			<button type="button" class="btn btn-ghost" onclick={() => composeOpen = false}>Cancelar</button>
 			<button type="submit" class="btn btn-primary" disabled={sendLoading}>
-				{sendLoading ? 'Enviando...' : 'Enviar'}
+				{sendLoading ? 'Enviando…' : 'Enviar'}
 			</button>
 		</div>
 	</form>

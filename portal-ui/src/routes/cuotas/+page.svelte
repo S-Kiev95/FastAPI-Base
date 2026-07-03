@@ -122,7 +122,7 @@
 		<div style="display: flex; gap: var(--space-3); justify-content: flex-end;">
 			<button class="btn btn-ghost" onclick={() => payModalOpen = false}>Cancelar</button>
 			<button class="btn btn-success" onclick={handlePay} disabled={payLoading}>
-				{payLoading ? 'Procesando...' : 'Confirmar Pago'}
+				{payLoading ? 'Procesando…' : 'Confirmar Pago'}
 			</button>
 		</div>
 	{/if}

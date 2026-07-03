@@ -78,7 +78,7 @@
 				</div>
 				<div class="form-group">
 					<label for="marcas_atendidas">Marcas atendidas</label>
-					<input id="marcas_atendidas" type="text" bind:value={form.marcas_atendidas} placeholder="Toyota, Fiat, ..." />
+					<input id="marcas_atendidas" type="text" bind:value={form.marcas_atendidas} placeholder="Toyota, Fiat, …" />
 				</div>
 			</div>
 			<div class="form-group">
@@ -88,7 +88,7 @@
 
 			<div style="display: flex; gap: var(--space-3); margin-top: var(--space-4)">
 				<button class="btn btn-primary" type="submit" disabled={loading}>
-					{loading ? 'Guardando...' : 'Crear Taller'}
+					{loading ? 'Guardando…' : 'Crear Taller'}
 				</button>
 			</div>
 		</form>

@@ -5,6 +5,9 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
+	/* Controles nativos (select, scrollbar, date picker) siguen el modo del SO */
+	color-scheme: light dark;
+
 	/* ── Color · Light ── */
 	--color-primary: #2563EB;
 	--color-primary-hover: #1D4ED8;

@@ -31,7 +31,7 @@
 {#if checking}
 	<div class="auth-check">
 		<div class="spinner"></div>
-		<p>Verificando sesion...</p>
+		<p>Verificando sesion…</p>
 	</div>
 {:else}
 	{@render children()}

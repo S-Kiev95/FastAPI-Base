@@ -57,7 +57,7 @@
 				<div class="form-group">
 					<label for="poliza_id">Poliza</label>
 					<select id="poliza_id" bind:value={form.poliza_id} required>
-						<option value="">Seleccionar poliza...</option>
+						<option value="">Seleccionar poliza…</option>
 						{#each polizas as p}
 							<option value={p.id}>{p.numero_poliza} — {p.cliente_nombre || ('Cliente ' + p.cliente_id)}</option>
 						{/each}
@@ -73,7 +73,7 @@
 				<div class="form-group">
 					<label for="tipo_siniestro">Tipo de Daño</label>
 					<select id="tipo_siniestro" bind:value={form.tipo_dano}>
-						<option value="">Seleccionar...</option>
+						<option value="">Seleccionar…</option>
 						<option value="dano_propio">Daño propio</option>
 						<option value="dano_tercero">Daño a tercero</option>
 						<option value="robo_total">Robo total</option>
@@ -95,7 +95,7 @@
 
 			<div style="display: flex; gap: var(--space-3); margin-top: var(--space-4)">
 				<button class="btn btn-primary" type="submit" disabled={loading}>
-					{loading ? 'Guardando...' : 'Crear Siniestro'}
+					{loading ? 'Guardando…' : 'Crear Siniestro'}
 				</button>
 			</div>
 		</form>
