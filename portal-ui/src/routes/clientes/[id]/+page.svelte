@@ -4,7 +4,8 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getClient, getClientVehicles, getClientPolicies } from '$lib/api.js';
+	import Modal from '$lib/components/Modal.svelte';
+	import { getClient, getClientVehicles, getClientPolicies, createVehicle } from '$lib/api.js';
 
 	let client = $state(null);
 	let vehicles = $state([]);
@@ -31,6 +32,38 @@
 			loading = false;
 		}
 	});
+
+	// Alta de vehículo
+	let vehModalOpen = $state(false);
+	let vehForm = $state({ marca: '', modelo: '', anio: '', matricula: '', tipo: 'auto', color: '' });
+	let vehLoading = $state(false);
+	let vehError = $state('');
+
+	function openVehModal() {
+		vehForm = { marca: '', modelo: '', anio: '', matricula: '', tipo: 'auto', color: '' };
+		vehError = '';
+		vehModalOpen = true;
+	}
+
+	async function handleAddVehicle(e) {
+		e.preventDefault();
+		vehLoading = true;
+		vehError = '';
+		try {
+			const data = {
+				...vehForm,
+				cliente_id: parseInt(clientId),
+				anio: vehForm.anio ? parseInt(vehForm.anio) : null
+			};
+			await createVehicle(data);
+			vehModalOpen = false;
+			vehicles = (await getClientVehicles(clientId).catch(() => [])) || [];
+		} catch (err) {
+			vehError = err.message;
+		} finally {
+			vehLoading = false;
+		}
+	}
 </script>
 
 <PortalLayout>
@@ -84,6 +117,9 @@
 				</div>
 			</div>
 		{:else if activeTab === 'vehiculos'}
+			<div style="display:flex; justify-content:flex-end; margin-bottom: var(--space-4)">
+				<button class="btn btn-primary btn-sm" onclick={openVehModal}>+ Agregar vehiculo</button>
+			</div>
 			<div class="card" style="padding:0; overflow:hidden;">
 				{#if vehicles.length > 0}
 					<table>
@@ -102,7 +138,7 @@
 									<td>{v.marca || '—'}</td>
 									<td>{v.modelo || '—'}</td>
 									<td>{v.anio || '—'}</td>
-									<td class="mono">{v.patente || '—'}</td>
+									<td class="mono">{v.matricula || '—'}</td>
 									<td class="mono">{v.numero_chasis || '—'}</td>
 								</tr>
 							{/each}
@@ -144,6 +180,37 @@
 		{/if}
 	{/if}
 </PortalLayout>
+
+<Modal open={vehModalOpen} title="Agregar vehiculo" onClose={() => vehModalOpen = false}>
+	<form onsubmit={handleAddVehicle}>
+		<div class="form-row">
+			<div class="form-group"><label for="marca">Marca</label><input id="marca" bind:value={vehForm.marca} required /></div>
+			<div class="form-group"><label for="modelo">Modelo</label><input id="modelo" bind:value={vehForm.modelo} /></div>
+		</div>
+		<div class="form-row">
+			<div class="form-group"><label for="matricula">Matricula</label><input id="matricula" bind:value={vehForm.matricula} required /></div>
+			<div class="form-group"><label for="anio">Anio</label><input id="anio" type="number" bind:value={vehForm.anio} /></div>
+		</div>
+		<div class="form-row">
+			<div class="form-group">
+				<label for="tipo">Tipo</label>
+				<select id="tipo" bind:value={vehForm.tipo}>
+					<option value="auto">Auto</option>
+					<option value="moto">Moto</option>
+					<option value="camion">Camion</option>
+					<option value="utilitario">Utilitario</option>
+					<option value="otro">Otro</option>
+				</select>
+			</div>
+			<div class="form-group"><label for="color">Color</label><input id="color" bind:value={vehForm.color} /></div>
+		</div>
+		{#if vehError}<div class="alert alert-danger">{vehError}</div>{/if}
+		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
+			<button type="button" class="btn btn-ghost" onclick={() => vehModalOpen = false}>Cancelar</button>
+			<button type="submit" class="btn btn-primary" disabled={vehLoading}>{vehLoading ? 'Guardando...' : 'Agregar'}</button>
+		</div>
+	</form>
+</Modal>
 
 <style>
 	.detail-grid {
