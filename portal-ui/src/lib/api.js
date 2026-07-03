@@ -251,6 +251,12 @@ export function getOverdueTasks() {
 	return apiFetch(`${orgBase()}/tareas/vencidas`);
 }
 
+/* ── Usuarios de la organización ── */
+
+export function getOrgUsers() {
+	return apiFetch(`${orgBase()}/usuarios`);
+}
+
 /* ── Mensajes ── */
 
 export function getInbox() {

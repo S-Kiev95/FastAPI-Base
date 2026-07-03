@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import Modal from '$lib/components/Modal.svelte';
-	import { getInbox, getSent, sendMessage, getUnreadCount, markRead } from '$lib/api.js';
+	import { getInbox, getSent, sendMessage, getUnreadCount, markRead, getOrgUsers } from '$lib/api.js';
 
 	let activeTab = $state('inbox');
 	let inbox = $state([]);
@@ -13,12 +13,14 @@
 
 	// Compose modal
 	let composeOpen = $state(false);
-	let composeForm = $state({ destinatario_id: '', asunto: '', cuerpo: '' });
+	let usuarios = $state([]);
+	let composeForm = $state({ destinatario_id: '', asunto: '', contenido: '' });
 	let sendLoading = $state(false);
 	let sendError = $state('');
 
 	onMount(async () => {
 		await loadMessages();
+		usuarios = (await getOrgUsers().catch(() => [])) || [];
 	});
 
 	async function loadMessages() {
@@ -54,7 +56,7 @@
 	}
 
 	function openCompose() {
-		composeForm = { destinatario_id: '', asunto: '', cuerpo: '' };
+		composeForm = { destinatario_id: '', asunto: '', contenido: '' };
 		sendError = '';
 		composeOpen = true;
 	}
@@ -171,8 +173,13 @@
 <Modal open={composeOpen} title="Nuevo Mensaje" onClose={() => composeOpen = false}>
 	<form onsubmit={handleSend}>
 		<div class="form-group">
-			<label for="destinatario">Destinatario ID</label>
-			<input id="destinatario" type="number" bind:value={composeForm.destinatario_id} required />
+			<label for="destinatario">Destinatario</label>
+			<select id="destinatario" bind:value={composeForm.destinatario_id} required>
+					<option value="">Seleccionar destinatario...</option>
+					{#each usuarios as u}
+						<option value={u.id}>{u.nombre}</option>
+					{/each}
+				</select>
 		</div>
 		<div class="form-group">
 			<label for="asunto">Asunto</label>
@@ -180,7 +187,7 @@
 		</div>
 		<div class="form-group">
 			<label for="cuerpo">Mensaje</label>
-			<textarea id="cuerpo" bind:value={composeForm.cuerpo} required rows="5"></textarea>
+			<textarea id="cuerpo" bind:value={composeForm.contenido} required rows="5"></textarea>
 		</div>
 
 		{#if sendError}

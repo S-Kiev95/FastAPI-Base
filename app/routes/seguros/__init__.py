@@ -14,6 +14,7 @@ from .workshops import router as workshops_router
 from .insurance_tasks import router as insurance_tasks_router
 from .messages import router as messages_router
 from .dashboard import router as dashboard_router
+from .org_users import router as org_users_router
 
 router = APIRouter(
     prefix="/api/orgs/{org_slug}/seguros",
@@ -30,3 +31,4 @@ router.include_router(workshops_router)
 router.include_router(insurance_tasks_router)
 router.include_router(messages_router)
 router.include_router(dashboard_router)
+router.include_router(org_users_router)
