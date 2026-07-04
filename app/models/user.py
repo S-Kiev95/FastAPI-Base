@@ -1,9 +1,12 @@
 from datetime import datetime
 from typing import Optional, List
+import re
 from sqlmodel import Field, SQLModel, Relationship
+from pydantic import field_validator
+from app.models.mixins import SoftDeleteMixin
 
 
-class User(SQLModel, table=True):
+class User(SoftDeleteMixin, SQLModel, table=True):
     """
     User model supporting dual authentication:
     - OAuth providers (Google, GitHub, etc.)
@@ -28,6 +31,7 @@ class User(SQLModel, table=True):
     # Account status
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)  # Email verification status
+    is_superadmin: bool = Field(default=False)  # Acceso global al admin panel
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -55,6 +59,7 @@ class UserRead(SQLModel):
     name: Optional[str]
     picture: Optional[str]
     is_active: bool
+    is_verified: bool
     created_at: datetime
 
 
@@ -68,10 +73,55 @@ class UserUpdate(SQLModel):
 # Authentication Schemas
 
 class UserRegister(SQLModel):
-    """Schema for user registration (local auth)"""
+    """Schema for user registration (local auth). Crea user + org + membership."""
     email: str
     password: str
     name: Optional[str] = None
+    organization_name: Optional[str] = None  # Si no se pasa, se genera del email
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Valida formato y bloquea dominios temporales."""
+        from app.config import settings
+
+        v = v.lower().strip()
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError("Formato de email inválido")
+
+        # Bloquear dominios temporales (solo si enforcement está habilitado)
+        if settings.ENFORCE_STRONG_PASSWORDS:
+            disposable = ["tempmail.com", "throwaway.email", "guerrillamail.com", "mailinator.com"]
+            domain = v.split("@")[1]
+            if domain in disposable:
+                raise ValueError("No se permiten emails temporales")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Valida fortaleza del password (opcional via ENFORCE_STRONG_PASSWORDS)."""
+        from app.config import settings
+
+        # Skip validation si no está habilitado (útil para testing)
+        if not settings.ENFORCE_STRONG_PASSWORDS:
+            return v
+
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("La contraseña debe contener al menos una mayúscula")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("La contraseña debe contener al menos una minúscula")
+        if not re.search(r"\d", v):
+            raise ValueError("La contraseña debe contener al menos un número")
+
+        # Passwords comunes bloqueados
+        common = ["password", "12345678", "qwerty", "abc123", "password123"]
+        if v.lower() in common:
+            raise ValueError("Contraseña demasiado común")
+        return v
 
 
 class UserLogin(SQLModel):

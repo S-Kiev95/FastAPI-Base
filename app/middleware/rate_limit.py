@@ -1,101 +1,170 @@
 """
 Rate Limiting Middleware
 
-Global rate limiting middleware that applies to all requests
-or specific path patterns.
+Middleware con rate limiting global y **per-tenant** basado en plan.
+Si el request incluye Bearer token y se puede resolver la organización,
+usa el `api_rate_limit` del plan; si no, usa el límite por IP.
 """
-from fastapi import Request, HTTPException
+import logging
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from app.services.rate_limiter import rate_limiter
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    Global rate limiting middleware
+    Rate limiting middleware con soporte per-tenant.
 
-    Applies rate limits based on:
-    - Client IP address
-    - Request path patterns
-    - Configurable limits per path
-
-    Example:
-        app.add_middleware(
-            RateLimitMiddleware,
-            default_limit=100,
-            default_window=60
-        )
+    Prioridad de límites:
+    1. Path-specific limits (ej. /media/upload → 30/min)
+    2. Per-tenant limit basado en PLAN_FEATURES.api_rate_limit (req/hora)
+    3. Default IP-based limit (100/min)
     """
 
     def __init__(
         self,
         app,
-        default_limit: int = 100,  # 100 requests
-        default_window: int = 60,  # per minute
-        exclude_paths: list = None  # Paths to exclude from rate limiting
+        default_limit: int = 100,
+        default_window: int = 60,
+        exclude_paths: list = None,
     ):
-        """
-        Initialize rate limit middleware
-
-        Args:
-            app: FastAPI app
-            default_limit: Default max requests
-            default_window: Default time window in seconds
-            exclude_paths: List of paths to exclude (e.g., ["/health", "/metrics"])
-        """
         super().__init__(app)
         self.default_limit = default_limit
         self.default_window = default_window
         self.exclude_paths = exclude_paths or ["/health", "/metrics", "/docs", "/openapi.json", "/redoc"]
 
-        # Path-specific limits (more restrictive for heavy endpoints)
+        # Path-specific limits (más restrictivos para endpoints pesados y auth)
         self.path_limits = {
-            "/tasks/": (50, 60),              # 50 requests/minute for task endpoints
-            "/tasks/email/bulk": (5, 3600),   # 5 bulk emails/hour
-            "/media/upload": (30, 60),        # 30 uploads/minute
+            # Auth endpoints (prevenir brute force)
+            "/auth/login": (5, 300),       # 5 intentos cada 5 minutos
+            "/auth/register": (3, 3600),   # 3 registros por hora (por IP)
+            "/auth/password-reset": (3, 3600),  # 3 resets por hora
+            # Task endpoints
+            "/tasks/": (50, 60),
+            "/tasks/email/bulk": (5, 3600),
+            # Media
+            "/media/upload": (30, 60),
         }
 
-    async def dispatch(self, request: Request, call_next):
-        """Process request with rate limiting"""
+    # ------------------------------------------------------------------ #
+    # Helpers
+    # ------------------------------------------------------------------ #
 
-        # Skip rate limiting for excluded paths
-        if any(request.url.path.startswith(path) for path in self.exclude_paths):
-            return await call_next(request)
-
-        # Skip if Redis is disabled
-        if not settings.REDIS_ENABLED:
-            return await call_next(request)
-
-        # Get client IP
-        client_ip = request.client.host
+    def _get_client_ip(self, request: Request) -> str:
+        client_ip = request.client.host if request.client else "unknown"
         forwarded_for = request.headers.get("X-Forwarded-For")
         if forwarded_for:
             client_ip = forwarded_for.split(",")[0].strip()
+        return client_ip
 
-        # Determine limit based on path
-        limit, window = self._get_limit_for_path(request.url.path)
+    def _resolve_tenant_limit(self, request: Request):
+        """
+        Intenta resolver org_id y rate limit del plan desde el Bearer token.
+        Retorna (rate_key_suffix, limit, window) o None si no aplica.
+        """
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.lower().startswith("bearer "):
+            return None
 
-        # Create rate limit key
-        rate_key = f"ip:{client_ip}:{request.url.path}"
+        token = auth_header[7:]
+        try:
+            from app.core.security import verify_token
+            from app.services.user_service import user_service
+            from sqlmodel import Session
+            from app.database import engine
+
+            # Resolver usuario
+            if settings.API_KEYS_ENABLED and token.startswith(settings.API_KEY_PREFIX):
+                from app.services.api_key_service import api_key_service
+                with Session(engine) as session:
+                    api_key = api_key_service.verify_key(session, token)
+                    if not api_key:
+                        return None
+                    user_id = api_key.user_id
+                    org_id = api_key.organization_id
+            else:
+                email = verify_token(token)
+                if not email:
+                    return None
+                with Session(engine) as session:
+                    user = user_service.get_user_by_email(session, email)
+                    if not user:
+                        return None
+                    user_id = user.id
+                    org_id = None
+
+            # Resolver organización (primera membership activa)
+            if not org_id:
+                from app.models.organization import Membership
+                from sqlmodel import select
+                with Session(engine) as session:
+                    membership = session.exec(
+                        select(Membership).where(
+                            Membership.user_id == user_id,
+                            Membership.is_active == True,
+                        ).limit(1)
+                    ).first()
+                    org_id = membership.organization_id if membership else None
+
+            if not org_id:
+                return None
+
+            # Obtener rate limit del plan
+            from app.core.plan_guards import get_plan_rate_limit
+            with Session(engine) as session:
+                plan_limit = get_plan_rate_limit(session, org_id)
+
+            if plan_limit is None:
+                return None  # Enterprise = sin límite
+
+            # Rate limit del plan es por hora
+            return f"org:{org_id}", plan_limit, 3600
+
+        except Exception as e:
+            logger.debug(f"No se pudo resolver tenant rate limit: {e}")
+            return None
+
+    # ------------------------------------------------------------------ #
+    # Dispatch
+    # ------------------------------------------------------------------ #
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip excluded paths
+        if any(request.url.path.startswith(path) for path in self.exclude_paths):
+            return await call_next(request)
+
+        if not settings.REDIS_ENABLED:
+            return await call_next(request)
+
+        client_ip = self._get_client_ip(request)
+
+        # 1. Path-specific limit
+        path_limit = self._get_limit_for_path(request.url.path)
+        if path_limit:
+            limit, window = path_limit
+            rate_key = f"ip:{client_ip}:{request.url.path}"
+        else:
+            # 2. Per-tenant limit
+            tenant_info = self._resolve_tenant_limit(request)
+            if tenant_info:
+                key_suffix, limit, window = tenant_info
+                rate_key = f"tenant:{key_suffix}"
+            else:
+                # 3. Default IP limit
+                limit, window = self.default_limit, self.default_window
+                rate_key = f"ip:{client_ip}"
 
         # Check rate limit
         allowed, info = await rate_limiter.check_rate_limit(
-            key=rate_key,
-            limit=limit,
-            window=window
+            key=rate_key, limit=limit, window=window
         )
 
-        # Add rate limit headers to response
-        async def add_rate_limit_headers(response):
-            response.headers["X-RateLimit-Limit"] = str(info["limit"])
-            response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
-            response.headers["X-RateLimit-Reset"] = str(info["reset_at"])
-            return response
-
         if not allowed:
-            # Rate limit exceeded
             return JSONResponse(
                 status_code=429,
                 content={
@@ -104,42 +173,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "limit": info["limit"],
                     "current_usage": info["current_usage"],
                     "retry_after": info["retry_after"],
-                    "reset_at": info["reset_at"]
+                    "reset_at": info["reset_at"],
                 },
                 headers={
                     "X-RateLimit-Limit": str(info["limit"]),
                     "X-RateLimit-Remaining": "0",
                     "X-RateLimit-Reset": str(info["reset_at"]),
-                    "Retry-After": str(info["retry_after"])
-                }
+                    "Retry-After": str(info["retry_after"]),
+                },
             )
 
-        # Process request
         response = await call_next(request)
 
-        # Add rate limit info headers
-        response = await add_rate_limit_headers(response)
+        # Rate limit headers
+        response.headers["X-RateLimit-Limit"] = str(info["limit"])
+        response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
+        response.headers["X-RateLimit-Reset"] = str(info["reset_at"])
 
         return response
 
-    def _get_limit_for_path(self, path: str) -> tuple:
-        """
-        Get rate limit for specific path
-
-        Args:
-            path: Request path
-
-        Returns:
-            Tuple of (limit, window)
-        """
-        # Check for exact match first
+    def _get_limit_for_path(self, path: str):
+        """Retorna (limit, window) si hay un path-specific limit, None si no."""
         if path in self.path_limits:
             return self.path_limits[path]
-
-        # Check for prefix match
         for pattern, limits in self.path_limits.items():
             if path.startswith(pattern):
                 return limits
-
-        # Return default
-        return self.default_limit, self.default_window
+        return None

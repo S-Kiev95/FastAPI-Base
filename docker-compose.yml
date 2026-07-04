@@ -16,7 +16,8 @@ services:
 
       # Redis
       REDIS_ENABLED: "true"
-      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
 
       # JWT
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
@@ -32,6 +33,11 @@ services:
       # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       # AWS_REGION: ${AWS_REGION:-us-east-1}
       # S3_BUCKET: ${S3_BUCKET}
+
+      # Observability
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
 
       # Email (optional)
       # SMTP_HOST: ${SMTP_HOST}
@@ -97,6 +103,30 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # ARQ Background Worker (misma imagen, distinto comando)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_worker
+    restart: unless-stopped
+    command: ["python", "-m", "arq", "app.workers.worker_config.WorkerSettings"]
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-fastapi_db}
+      REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fastapi_network
 
   # Nginx (optional - uncomment for reverse proxy)
   # nginx:

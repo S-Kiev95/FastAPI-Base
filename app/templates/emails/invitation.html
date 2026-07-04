@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Invitación a {{ org_name }}{% endblock %}
+
+{% block header_title %}Te han invitado{% endblock %}
+
+{% block content %}
+<h2>¡Hola! 👋</h2>
+
+<p><strong>{{ inviter_name }}</strong> te ha invitado a unirte a la organización <strong>{{ org_name }}</strong> en {{ app_name }}.</p>
+
+<div class="info-box">
+    <p style="margin: 0;"><strong>Rol asignado:</strong> {{ role }}</p>
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ accept_url }}" class="button">Aceptar invitación</a>
+</div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+    <a href="{{ accept_url }}" style="color: #667eea; word-break: break-all;">{{ accept_url }}</a>
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 14px; color: #6c757d;">
+    Esta invitación expira en {{ expire_hours }} horas. Si no solicitaste esta invitación, puedes ignorar este correo.
+</p>
+
+<p style="margin-top: 30px;">
+    Saludos,<br>
+    <strong>El equipo de {{ app_name }}</strong>
+</p>
+{% endblock %}

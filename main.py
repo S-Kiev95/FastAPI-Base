@@ -1,15 +1,27 @@
 import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from sqlmodel import inspect
+from sqlmodel import inspect, text
 from prometheus_fastapi_instrumentator import Instrumentator
 import os
 
+# Sentry — inicializar antes de cualquier import de la app
+import sentry_sdk
 from app.config import settings
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+        release=settings.API_VERSION,
+    )
 from app.database import engine, init_db, get_session
 from app.routes import users_router
 from app.routes.auth import router as auth_router
@@ -21,12 +33,22 @@ from app.routes.cors import router as cors_router
 from app.routes.metrics import router as metrics_router
 from app.routes.tasks import router as tasks_router
 from app.routes.webhooks import router as webhooks_router
+from app.routes.organizations import router as organizations_router
+from app.routes.billing import router as billing_router
+from app.routes.admin import router as admin_router
+from app.routes.audit import router as audit_router
+from app.routes.api_keys import router as api_keys_router
+from app.routes.gdpr import router as gdpr_router
+from app.routes.setup import router as setup_router
+from app.routes.seguros import router as seguros_router
 from app.services.cors_service import cors_service
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.logging import LoggingMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.task_notification_service import start_task_notification_listener
 from app.utils.logger import get_structured_logger
+from app.core.seed import seed_all
 
 # Setup logger
 logger = get_structured_logger(__name__)
@@ -49,6 +71,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Initializing database")
         init_db()
+        seed_all()
 
     # Start task notification listener (if Redis is enabled)
     if settings.REDIS_ENABLED:
@@ -94,6 +117,14 @@ app.add_middleware(
 # Add logging middleware (should be first to capture all requests)
 app.add_middleware(LoggingMiddleware)
 
+# Add security headers (HSTS solo en producción)
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    enable_hsts=(settings.ENVIRONMENT == "production"),
+    enable_csp=True,
+)
+logger.info("Security headers enabled", hsts=settings.ENVIRONMENT == "production")
+
 # Add metrics middleware to collect API metrics
 app.add_middleware(MetricsMiddleware)
 
@@ -120,6 +151,14 @@ app.include_router(cors_router)
 app.include_router(metrics_router)
 app.include_router(tasks_router)
 app.include_router(webhooks_router)
+app.include_router(organizations_router)
+app.include_router(billing_router)
+app.include_router(admin_router)
+app.include_router(audit_router)
+app.include_router(api_keys_router)
+app.include_router(gdpr_router)
+app.include_router(setup_router)
+app.include_router(seguros_router)
 
 # Configure Prometheus metrics
 # Instrument the app with Prometheus metrics
@@ -141,6 +180,34 @@ static_dir = os.path.join(os.path.dirname(__file__), "app", "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Mount admin panel (Svelte build) — archivos estáticos + SPA fallback
+admin_build_dir = os.path.join(os.path.dirname(__file__), "app", "admin")
+if os.path.exists(admin_build_dir):
+    from starlette.responses import FileResponse as StarletteFileResponse
+
+    # Servir archivos estáticos del build (_app/, favicon, etc.)
+    app.mount("/admin/_app", StaticFiles(directory=os.path.join(admin_build_dir, "_app")), name="admin_assets")
+
+    # SPA catch-all: cualquier ruta bajo /admin devuelve index.html
+    @app.get("/admin/{full_path:path}", response_class=HTMLResponse)
+    async def admin_spa(full_path: str):
+        return StarletteFileResponse(os.path.join(admin_build_dir, "index.html"))
+
+    logger.info("Admin panel mounted at /admin")
+
+# Mount portal de seguros (Svelte build) — archivos estáticos + SPA fallback
+portal_build_dir = os.path.join(os.path.dirname(__file__), "app", "portal")
+if os.path.exists(portal_build_dir):
+    from starlette.responses import FileResponse as StarletteFileResponse
+
+    app.mount("/app/_app", StaticFiles(directory=os.path.join(portal_build_dir, "_app")), name="portal_assets")
+
+    @app.get("/app/{full_path:path}", response_class=HTMLResponse)
+    async def portal_spa(full_path: str):
+        return StarletteFileResponse(os.path.join(portal_build_dir, "index.html"))
+
+    logger.info("Portal de seguros mounted at /app")
+
 
 @app.get("/", response_class=HTMLResponse)
 def root():
@@ -151,9 +218,57 @@ def root():
 
 
 @app.get("/health")
-def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+async def health_check():
+    """Health check extendido — verifica DB, Redis y reporta versión."""
+    checks: dict = {
+        "status": "ok",
+        "version": settings.API_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # --- Database ---
+    try:
+        from sqlmodel import Session
+        with Session(engine) as session:
+            session.exec(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        checks["database"] = f"error: {exc}"
+        checks["status"] = "degraded"
+
+    # --- Redis ---
+    if settings.REDIS_ENABLED:
+        try:
+            import redis as _redis
+            r = _redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD or None,
+                socket_connect_timeout=2,
+            )
+            r.ping()
+            checks["redis"] = "ok"
+            r.close()
+        except Exception as exc:
+            checks["redis"] = f"error: {exc}"
+            checks["status"] = "degraded"
+    else:
+        checks["redis"] = "disabled"
+
+    # --- Sentry ---
+    checks["sentry"] = "enabled" if settings.SENTRY_DSN else "disabled"
+
+    return checks
+
+
+# Endpoint de debug para verificar que Sentry captura errores (solo dev)
+if settings.ENVIRONMENT != "production":
+    @app.get("/debug/sentry", include_in_schema=False)
+    async def sentry_debug():
+        """Lanza un error intencional para verificar integración con Sentry."""
+        raise RuntimeError("Test Sentry error — this is intentional")
 
 
 def main():

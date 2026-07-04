@@ -10,6 +10,7 @@ class Settings:
 
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+    SQL_ECHO: bool = os.getenv("SQL_ECHO", "False").lower() == "true"  # log de SQL (debug); OFF en prod
 
     # API Configuration
     API_TITLE: str = os.getenv("API_TITLE", "FastAPI Base Template")
@@ -73,6 +74,43 @@ class Settings:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     LOG_FORMAT: str = os.getenv("LOG_FORMAT", "json")  # json or text
     LOG_FILE: str = os.getenv("LOG_FILE", "")  # Optional: path to log file (e.g., "logs/app.log")
+
+    # Auth tokens
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+    INVITATION_EXPIRE_HOURS: int = int(os.getenv("INVITATION_EXPIRE_HOURS", "48"))
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+    # Multi-tenancy
+    DEFAULT_PLAN: str = os.getenv("DEFAULT_PLAN", "free")
+    SYSTEM_ORG_SLUG: str = os.getenv("SYSTEM_ORG_SLUG", "system")
+    SYSTEM_ADMIN_EMAIL: str = os.getenv("SYSTEM_ADMIN_EMAIL", "")
+    SYSTEM_ADMIN_PASSWORD: str = os.getenv("SYSTEM_ADMIN_PASSWORD", "")
+
+    # SaaS Features
+    SOFT_DELETE_ENABLED: bool = os.getenv("SOFT_DELETE_ENABLED", "True").lower() == "true"
+    AUDIT_LOG_ENABLED: bool = os.getenv("AUDIT_LOG_ENABLED", "True").lower() == "true"
+    API_KEYS_ENABLED: bool = os.getenv("API_KEYS_ENABLED", "True").lower() == "true"
+    API_KEY_PREFIX: str = os.getenv("API_KEY_PREFIX", "sk_live_")
+    GDPR_EXPORT_ENABLED: bool = os.getenv("GDPR_EXPORT_ENABLED", "True").lower() == "true"
+    ACCOUNT_DELETION_GRACE_DAYS: int = int(os.getenv("ACCOUNT_DELETION_GRACE_DAYS", "30"))
+
+    # Observability
+    SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
+    SENTRY_TRACES_SAMPLE_RATE: float = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+    # Security
+    ENFORCE_STRONG_PASSWORDS: bool = os.getenv("ENFORCE_STRONG_PASSWORDS", "False").lower() == "true"
+
+    # Billing / Payment Gateways
+    ACTIVE_PAYMENT_GATEWAY: str = os.getenv("ACTIVE_PAYMENT_GATEWAY", "stripe")
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    MERCADOPAGO_ACCESS_TOKEN: str = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
+    MERCADOPAGO_WEBHOOK_SECRET: str = os.getenv("MERCADOPAGO_WEBHOOK_SECRET", "")
+    POLAR_ACCESS_TOKEN: str = os.getenv("POLAR_ACCESS_TOKEN", "")
+    POLAR_WEBHOOK_SECRET: str = os.getenv("POLAR_WEBHOOK_SECRET", "")
 
     @property
     def cors_origins_list(self) -> list:

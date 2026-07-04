@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Column
 from sqlalchemy import Text
+from app.models.mixins import SoftDeleteMixin
 
 # Conditional import for pgvector support
 try:
@@ -16,7 +17,7 @@ except ImportError:
     Vector = None
 
 
-class Media(SQLModel, table=True):
+class Media(SoftDeleteMixin, SQLModel, table=True):
     """
     Media model for storing file metadata.
     The actual file is stored in S3/MinIO or local filesystem.
@@ -49,8 +50,9 @@ class Media(SQLModel, table=True):
         sa_column=Column(Vector(512)) if PGVECTOR_AVAILABLE else Column(Text)
     )
 
-    # Ownership (optional - link to user)
+    # Ownership
     user_id: Optional[int] = Field(default=None, index=True)
+    organization_id: Optional[str] = Field(default=None, index=True)
 
     # Storage backend
     storage_backend: str = Field(default="local")  # 's3' or 'local'
@@ -80,6 +82,7 @@ class MediaCreate(SQLModel):
     alt_text: Optional[str] = None
     embedding: Optional[List[float]] = None  # Optional vector embedding
     user_id: Optional[int] = None
+    organization_id: Optional[str] = None
     storage_backend: str = "local"
     is_public: bool = False
 
@@ -96,6 +99,7 @@ class MediaRead(SQLModel):
     alt_text: Optional[str]
     embedding: Optional[List[float]] = None  # Vector embedding (if available)
     user_id: Optional[int]
+    organization_id: Optional[str] = None
     storage_backend: str
     is_public: bool
     is_active: bool

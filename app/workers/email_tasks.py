@@ -1,16 +1,13 @@
 """
-Email sending tasks for ARQ workers
+Tareas ARQ de email — usan EmailService para envío real.
 
 Tasks:
-- send_single_email: Send one email
-- send_bulk_emails: Send multiple emails with rate limiting
+- send_single_email: Envía un email (HTML pre-renderizado)
+- send_bulk_emails: Envía múltiples emails con rate limiting
 """
 import asyncio
 from typing import Dict, Any, List
 from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 from app.config import settings
 from app.utils.logger import get_structured_logger, LogContext
@@ -24,21 +21,12 @@ async def send_single_email(
     subject: str,
     body: str,
     html_body: str = None,
-    user_id: int = None
+    user_id: int = None,
 ) -> Dict[str, Any]:
     """
-    Send a single email
+    Envía un email individual.
 
-    Args:
-        ctx: ARQ context
-        to_email: Recipient email address
-        subject: Email subject
-        body: Plain text email body
-        html_body: HTML email body (optional)
-        user_id: ID of user who triggered this (optional)
-
-    Returns:
-        Dict with send status
+    El html_body ya viene renderizado desde EmailService.enqueue().
     """
     job_id = ctx.get("job_id")
     with LogContext(job_id=job_id, user_id=user_id, task="send_single_email"):
@@ -47,63 +35,53 @@ async def send_single_email(
         await _update_task_status(ctx, "processing", progress=10)
 
         try:
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-            msg['To'] = to_email
-
-            # Attach plain text
-            msg.attach(MIMEText(body, 'plain'))
-
-            # Attach HTML if provided
-            if html_body:
-                msg.attach(MIMEText(html_body, 'html'))
-
-            await _update_task_status(ctx, "processing", progress=30)
-
-            # Connect to SMTP server and send
+            # Verificar configuración SMTP
             if not settings.SMTP_HOST or not settings.SMTP_USER:
-                logger.warning("SMTP not configured, email skipped (dev mode)", to_email=to_email)
+                logger.warning("SMTP not configured, email skipped", to_email=to_email)
                 result = {
                     "to_email": to_email,
                     "subject": subject,
                     "status": "skipped",
                     "message": "SMTP not configured",
                 }
-            else:
-                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                    if settings.SMTP_USE_TLS:
-                        server.starttls()
+                await _update_task_status(ctx, "completed", progress=100)
+                await _publish_notification(ctx, user_id, "email_sent", result)
+                return result
 
-                    await _update_task_status(ctx, "processing", progress=60)
+            await _update_task_status(ctx, "processing", progress=30)
 
-                    if settings.SMTP_PASSWORD:
-                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            # Usar EmailService para envío real
+            from app.services.email_service import email_service
 
-                    await _update_task_status(ctx, "processing", progress=80)
-
-                    server.send_message(msg)
-
-                result = {
-                    "to_email": to_email,
-                    "subject": subject,
-                    "status": "sent",
-                    "sent_at": datetime.utcnow().isoformat(),
-                }
+            content = html_body or f"<p>{body}</p>"
+            success = await email_service.send_email(
+                to=[to_email],
+                subject=subject,
+                html_content=content,
+                text_content=body,
+            )
 
             await _update_task_status(ctx, "processing", progress=100)
 
-            # Publish notification
-            await _publish_notification(ctx, user_id, "email_sent", result)
+            result = {
+                "to_email": to_email,
+                "subject": subject,
+                "status": "sent" if success else "failed",
+                "sent_at": datetime.utcnow().isoformat(),
+            }
 
-            logger.info("Email sent successfully", to_email=to_email, status=result["status"])
+            event = "email_sent" if success else "email_failed"
+            await _publish_notification(ctx, user_id, event, result)
+
+            logger.info("Email task completed", to_email=to_email, status=result["status"])
             return result
 
         except Exception as e:
             error_msg = f"Failed to send email: {str(e)}"
             logger.error("Email sending failed", to_email=to_email, error=str(e))
-            await _publish_notification(ctx, user_id, "email_failed", {"to_email": to_email, "error": error_msg})
+            await _publish_notification(ctx, user_id, "email_failed", {
+                "to_email": to_email, "error": error_msg,
+            })
             raise
 
 
@@ -111,62 +89,47 @@ async def send_bulk_emails(
     ctx: Dict[str, Any],
     emails: List[Dict[str, str]],
     rate_limit: int = 10,
-    user_id: int = None
+    user_id: int = None,
 ) -> Dict[str, Any]:
     """
-    Send multiple emails with rate limiting
+    Envía múltiples emails con rate limiting.
 
     Args:
-        ctx: ARQ context
-        emails: List of dicts with 'to_email', 'subject', 'body', 'html_body'
-        rate_limit: Max emails per minute
-        user_id: ID of user who triggered this
-
-    Returns:
-        Dict with sending statistics
+        emails: Lista de dicts con 'to_email', 'subject', 'body', 'html_body'
+        rate_limit: Máximo de emails por minuto
     """
     total = len(emails)
     job_id = ctx.get("job_id")
 
     with LogContext(job_id=job_id, user_id=user_id, task="send_bulk_emails"):
-        logger.info("Starting bulk email sending", total_emails=total, rate_limit=rate_limit)
+        logger.info("Starting bulk email", total_emails=total, rate_limit=rate_limit)
 
         await _update_task_status(ctx, "processing", progress=0)
 
-        results = {
-            "total": total,
-            "sent": 0,
-            "failed": 0,
-            "errors": [],
-        }
-
-        delay = 60.0 / rate_limit  # Delay between emails in seconds
+        results = {"total": total, "sent": 0, "failed": 0, "errors": []}
+        delay = 60.0 / rate_limit
 
         for idx, email_data in enumerate(emails):
             try:
-                # Send individual email
                 await send_single_email(
                     ctx,
                     to_email=email_data["to_email"],
                     subject=email_data["subject"],
                     body=email_data["body"],
                     html_body=email_data.get("html_body"),
-                    user_id=user_id
+                    user_id=user_id,
                 )
                 results["sent"] += 1
-
             except Exception as e:
                 results["failed"] += 1
                 results["errors"].append({
                     "to_email": email_data["to_email"],
-                    "error": str(e)
+                    "error": str(e),
                 })
 
-            # Update progress
             progress = int((idx + 1) / total * 100)
             await _update_task_status(ctx, "processing", progress=progress)
 
-            # Publish intermediate update every 10 emails
             if (idx + 1) % 10 == 0:
                 await _publish_notification(ctx, user_id, "bulk_email_progress", {
                     "sent": results["sent"],
@@ -174,61 +137,50 @@ async def send_bulk_emails(
                     "total": total,
                     "progress": progress,
                 })
-                logger.info("Bulk email progress update",
-                           sent=results["sent"],
-                           failed=results["failed"],
-                           progress=progress)
 
-            # Rate limiting: wait between emails
-            if idx < total - 1:  # Don't wait after last email
+            if idx < total - 1:
                 await asyncio.sleep(delay)
 
-        # Final notification
         await _publish_notification(ctx, user_id, "bulk_email_completed", results)
-
-        logger.info("Bulk email completed",
-                   sent=results["sent"],
-                   failed=results["failed"],
-                   total=total)
+        logger.info("Bulk email completed", sent=results["sent"], failed=results["failed"])
         return results
 
 
-# Helper functions
+# ---- Helpers ----
 
 async def _update_task_status(ctx: Dict[str, Any], status: str, progress: int = None):
-    """Update task status in Redis"""
+    """Actualiza estado del job en Redis."""
     job_id = ctx.get("job_id")
     if not job_id:
         return
 
-    redis = ctx["redis"]
+    redis = ctx.get("redis")
+    if not redis:
+        return
 
     data = {"status": status}
     if progress is not None:
         data["progress"] = progress
     data["updated_at"] = datetime.utcnow().isoformat()
 
-    # Store in Redis with TTL of 1 hour
-    await redis.setex(
-        f"task_status:{job_id}",
-        3600,  # 1 hour TTL
-        str(data)
-    )
+    await redis.setex(f"task_status:{job_id}", 3600, str(data))
 
 
 async def _publish_notification(
     ctx: Dict[str, Any],
     user_id: int,
     event_type: str,
-    data: Dict[str, Any]
+    data: Dict[str, Any],
 ):
-    """Publish notification via Redis Pub/Sub for WebSocket relay"""
+    """Publica notificación via Redis Pub/Sub para relay WebSocket."""
     if user_id is None:
         return
 
-    redis = ctx["redis"]
-    job_id = ctx.get("job_id")
+    redis = ctx.get("redis")
+    if not redis:
+        return
 
+    job_id = ctx.get("job_id")
     notification = {
         "job_id": job_id,
         "user_id": user_id,
@@ -237,8 +189,6 @@ async def _publish_notification(
         "timestamp": datetime.utcnow().isoformat(),
     }
 
-    # Publish to channel that WebSocket handler will listen to
     channel = f"task_notifications:{user_id}"
     await redis.publish(channel, str(notification))
-
     logger.debug("Published notification", channel=channel, event_type=event_type)

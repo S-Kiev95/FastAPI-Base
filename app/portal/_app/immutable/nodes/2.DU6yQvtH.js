@@ -1,0 +1,1 @@
+import{a as i,f as r}from"../chunks/DSNzhdjt.js";import{i as p}from"../chunks/u-bPvsrS.js";import{p as t,o as m,a as n}from"../chunks/D13M_jhI.js";import{g as d,b as f}from"../chunks/Dk4V-P0p.js";var e=r('<div class="loading"><div class="spinner"></div></div>');function b(o,a){t(a,!1),m(()=>{d(`${f}/dashboard`)}),p();var s=e();i(o,s),n()}export{b as component};

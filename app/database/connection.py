@@ -1,6 +1,10 @@
 import os
 from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
+
+# Base para modelos que usan SQLAlchemy pura (ej: webhook)
+Base = declarative_base()
 
 # Load environment variables
 load_dotenv()
@@ -12,7 +16,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 # For SQLite, add check_same_thread=False
 # For production with PostgreSQL/MySQL, remove connect_args
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
+# SQL_ECHO loguea todas las sentencias SQL — útil en debug, ruidoso/lento en prod.
+# Por defecto OFF; activar con SQL_ECHO=True.
+SQL_ECHO = os.getenv("SQL_ECHO", "False").lower() == "true"
+engine = create_engine(DATABASE_URL, echo=SQL_ECHO, connect_args=connect_args)
 
 
 def init_db() -> None:
@@ -22,10 +29,19 @@ def init_db() -> None:
     """
     # Import all models here to ensure they are registered with SQLModel
     from app.models import User  # noqa: F401
+    from app.models.organization import Organization, Membership  # noqa: F401
+    from app.models.refresh_token import RefreshToken  # noqa: F401
+    from app.models.invitation import Invitation  # noqa: F401
     from app.models.media import Media  # noqa: F401
     from app.models.role import Role, Permission, UserRole, RolePermission  # noqa: F401
     from app.models.cors_origin import CorsOrigin  # noqa: F401
     from app.models.metric import ApiMetric  # noqa: F401
+    # Dominio de seguros
+    from app.models.seguros import (  # noqa: F401
+        Client, Vehicle, Insurer, Policy, Installment,
+        Claim, ClaimDocument, Workshop, InsurerWorkshop,
+        InsuranceTask, Message,
+    )
 
     SQLModel.metadata.create_all(engine)
     print("Database tables created successfully")

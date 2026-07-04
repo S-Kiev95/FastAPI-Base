@@ -99,8 +99,17 @@ connection_manager = ConnectionManager()
 # Channel managers for each model
 users_channel = ChannelManager(connection_manager, "users")
 media_channel = ChannelManager(connection_manager, "media")
+organizations_channel = ChannelManager(connection_manager, "organizations")
 
-# Add more channels for other models as needed:
-# posts_channel = ChannelManager(connection_manager, "posts")
-# comments_channel = ChannelManager(connection_manager, "comments")
-# notifications_channel = ChannelManager(connection_manager, "notifications")
+# Canales del dominio de seguros
+clients_channel = ChannelManager(connection_manager, "clientes")
+vehicles_channel = ChannelManager(connection_manager, "vehiculos")
+insurers_channel = ChannelManager(connection_manager, "aseguradoras")
+policies_channel = ChannelManager(connection_manager, "polizas")
+installments_channel = ChannelManager(connection_manager, "cuotas")
+claims_channel = ChannelManager(connection_manager, "siniestros")
+claim_documents_channel = ChannelManager(connection_manager, "siniestro_documentos")
+workshops_channel = ChannelManager(connection_manager, "talleres")
+insurer_workshops_channel = ChannelManager(connection_manager, "aseguradora_talleres")
+insurance_tasks_channel = ChannelManager(connection_manager, "tareas")
+messages_channel = ChannelManager(connection_manager, "mensajes")
