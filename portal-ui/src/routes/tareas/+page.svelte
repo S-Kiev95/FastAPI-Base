@@ -3,7 +3,7 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getMyTasks, completeTask } from '$lib/api.js';
+	import { getMyTasks, completeTask, deleteTask } from '$lib/api.js';
 
 	let tasks = $state([]);
 	let loading = $state(true);
@@ -59,6 +59,16 @@
 			tasks = tasks.map(t =>
 				t.id === taskId ? { ...t, estado: 'completada' } : t
 			);
+		} catch (err) {
+			error = err.message;
+		}
+	}
+
+	async function handleDelete(taskId) {
+		if (!confirm('¿Borrar esta tarea? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteTask(taskId);
+			tasks = tasks.filter(t => t.id !== taskId);
 		} catch (err) {
 			error = err.message;
 		}
@@ -128,13 +138,16 @@
 									<td>{task.fecha_vencimiento || '—'}</td>
 									<td><StatusBadge status={task.estado} /></td>
 									<td>
-										{#if task.estado !== 'completada'}
-											<button class="btn btn-success btn-sm" onclick={() => handleComplete(task.id)}>
-												Completar
-											</button>
-										{:else}
-											<span class="text-secondary text-sm">Completada</span>
-										{/if}
+										<div style="display:flex; gap: var(--space-2); align-items:center;">
+											{#if task.estado !== 'completada'}
+												<button class="btn btn-success btn-sm" onclick={() => handleComplete(task.id)}>
+													Completar
+												</button>
+											{:else}
+												<span class="text-secondary text-sm">Completada</span>
+											{/if}
+											<button class="btn btn-danger btn-sm" onclick={() => handleDelete(task.id)}>Borrar</button>
+										</div>
 									</td>
 								</tr>
 							{/each}

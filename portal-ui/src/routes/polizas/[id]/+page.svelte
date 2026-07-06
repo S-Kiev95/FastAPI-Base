@@ -5,7 +5,7 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getPolicy, getPolicyInstallments, getPolicyClaims } from '$lib/api.js';
+	import { getPolicy, getPolicyInstallments, getPolicyClaims, deletePolicy } from '$lib/api.js';
 
 	let policy = $state(null);
 	let installments = $state([]);
@@ -15,6 +15,16 @@
 	let activeTab = $state('detalle');
 
 	let policyId = $page.params.id;
+
+	async function handleDelete() {
+		if (!confirm('¿Borrar esta póliza? Esta acción no se puede deshacer.')) return;
+		try {
+			await deletePolicy(policyId);
+			goto(`${base}/polizas`);
+		} catch (err) {
+			error = err.message;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -42,7 +52,10 @@
 	{:else if policy}
 		<div class="page-header">
 			<h1>Poliza {policy.numero_poliza}</h1>
-			<a href="{base}/polizas" class="btn btn-secondary">Volver</a>
+			<div style="display:flex; gap: var(--space-2)">
+					<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
+					<a href="{base}/polizas" class="btn btn-secondary">Volver</a>
+				</div>
 		</div>
 
 		<div class="tabs">

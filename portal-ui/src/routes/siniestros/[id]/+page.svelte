@@ -1,10 +1,11 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getClaim, getClaimDocuments, markDocumentReceived } from '$lib/api.js';
+	import { getClaim, getClaimDocuments, markDocumentReceived, deleteClaim } from '$lib/api.js';
 
 	let claim = $state(null);
 	let documents = $state([]);
@@ -12,6 +13,16 @@
 	let error = $state('');
 
 	let claimId = $page.params.id;
+
+	async function handleDelete() {
+		if (!confirm('¿Borrar este siniestro? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteClaim(claimId);
+			goto(`${base}/siniestros`);
+		} catch (err) {
+			error = err.message;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -48,7 +59,10 @@
 	{:else if claim}
 		<div class="page-header">
 			<h1>Siniestro {claim.numero_siniestro || claim.id}</h1>
-			<a href="{base}/siniestros" class="btn btn-secondary">Volver</a>
+			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
+				<a href="{base}/siniestros" class="btn btn-secondary">Volver</a>
+			</div>
 		</div>
 
 		<div class="card" style="margin-bottom: var(--space-6)">

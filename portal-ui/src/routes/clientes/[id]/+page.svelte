@@ -1,11 +1,12 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
-	import { getClient, getClientVehicles, getClientPolicies, createVehicle } from '$lib/api.js';
+	import { getClient, getClientVehicles, getClientPolicies, createVehicle, deleteClient, deleteVehicle } from '$lib/api.js';
 
 	let client = $state(null);
 	let vehicles = $state([]);
@@ -15,6 +16,16 @@
 	let activeTab = $state('datos');
 
 	let clientId = $page.params.id;
+
+	async function handleDelete() {
+		if (!confirm('¿Borrar este cliente? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteClient(clientId);
+			goto(`${base}/clientes`);
+		} catch (err) {
+			error = err.message;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -43,6 +54,16 @@
 		vehForm = { marca: '', modelo: '', anio: '', matricula: '', tipo: 'auto', color: '' };
 		vehError = '';
 		vehModalOpen = true;
+	}
+
+	async function handleDeleteVehicle(id) {
+		if (!confirm('¿Borrar este vehiculo? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteVehicle(id);
+			vehicles = vehicles.filter(v => v.id !== id);
+		} catch (err) {
+			error = err.message;
+		}
 	}
 
 	async function handleAddVehicle(e) {
@@ -74,7 +95,10 @@
 	{:else if client}
 		<div class="page-header">
 			<h1>{client.nombre} {client.apellido}</h1>
-			<a href="{base}/clientes" class="btn btn-secondary">Volver</a>
+			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
+				<a href="{base}/clientes" class="btn btn-secondary">Volver</a>
+			</div>
 		</div>
 
 		<div class="tabs">
@@ -130,6 +154,7 @@
 								<th>Anio</th>
 								<th>Patente</th>
 								<th>Chasis</th>
+								<th></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -140,6 +165,7 @@
 									<td>{v.anio || '—'}</td>
 									<td class="mono">{v.matricula || '—'}</td>
 									<td class="mono">{v.numero_chasis || '—'}</td>
+									<td style="text-align:right"><button class="btn btn-danger btn-sm" onclick={() => handleDeleteVehicle(v.id)}>Borrar</button></td>
 								</tr>
 							{/each}
 						</tbody>

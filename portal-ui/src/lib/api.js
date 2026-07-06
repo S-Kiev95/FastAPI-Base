@@ -129,6 +129,14 @@ export function createVehicle(data) {
 	return apiFetch(`${orgBase()}/vehiculos`, { method: 'POST', body: JSON.stringify(data) });
 }
 
+export function updateVehicle(id, data) {
+	return apiFetch(`${orgBase()}/vehiculos/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteVehicle(id) {
+	return apiFetch(`${orgBase()}/vehiculos/${id}`, { method: 'DELETE' });
+}
+
 /* ── Aseguradoras ── */
 
 export function getInsurers(params = {}) {
@@ -142,6 +150,14 @@ export function getInsurer(id) {
 
 export function createInsurer(data) {
 	return apiFetch(`${orgBase()}/aseguradoras`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateInsurer(id, data) {
+	return apiFetch(`${orgBase()}/aseguradoras/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteInsurer(id) {
+	return apiFetch(`${orgBase()}/aseguradoras/${id}`, { method: 'DELETE' });
 }
 
 /* ── Pólizas ── */
@@ -173,6 +189,14 @@ export function getPolicyInstallments(id) {
 
 export function getPolicyClaims(id) {
 	return apiFetch(`${orgBase()}/polizas/${id}/siniestros`);
+}
+
+export function updatePolicy(id, data) {
+	return apiFetch(`${orgBase()}/polizas/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deletePolicy(id) {
+	return apiFetch(`${orgBase()}/polizas/${id}`, { method: 'DELETE' });
 }
 
 /* ── Cuotas ── */
@@ -217,6 +241,14 @@ export function markDocumentReceived(claimId, docId) {
 	return apiFetch(`${orgBase()}/siniestros/${claimId}/documentos/${docId}/recibido`, { method: 'POST' });
 }
 
+export function updateClaim(id, data) {
+	return apiFetch(`${orgBase()}/siniestros/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteClaim(id) {
+	return apiFetch(`${orgBase()}/siniestros/${id}`, { method: 'DELETE' });
+}
+
 /* ── Talleres ── */
 
 export function getWorkshops(params = {}) {
@@ -226,6 +258,14 @@ export function getWorkshops(params = {}) {
 
 export function createWorkshop(data) {
 	return apiFetch(`${orgBase()}/talleres`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateWorkshop(id, data) {
+	return apiFetch(`${orgBase()}/talleres/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteWorkshop(id) {
+	return apiFetch(`${orgBase()}/talleres/${id}`, { method: 'DELETE' });
 }
 
 /* ── Tareas ── */
@@ -249,6 +289,14 @@ export function completeTask(id) {
 
 export function getOverdueTasks() {
 	return apiFetch(`${orgBase()}/tareas/vencidas`);
+}
+
+export function updateTask(id, data) {
+	return apiFetch(`${orgBase()}/tareas/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteTask(id) {
+	return apiFetch(`${orgBase()}/tareas/${id}`, { method: 'DELETE' });
 }
 
 /* ── Usuarios de la organización ── */

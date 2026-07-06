@@ -1,15 +1,26 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
-	import { getInsurer } from '$lib/api.js';
+	import { getInsurer, deleteInsurer } from '$lib/api.js';
 
 	let insurer = $state(null);
 	let loading = $state(true);
 	let error = $state('');
 
 	let insurerId = $page.params.id;
+
+	async function handleDelete() {
+		if (!confirm('¿Borrar esta aseguradora? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteInsurer(insurerId);
+			goto(`${base}/aseguradoras`);
+		} catch (err) {
+			error = err.message;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -30,7 +41,10 @@
 	{:else if insurer}
 		<div class="page-header">
 			<h1>{insurer.nombre}</h1>
-			<a href="{base}/aseguradoras" class="btn btn-secondary">Volver</a>
+			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
+				<a href="{base}/aseguradoras" class="btn btn-secondary">Volver</a>
+			</div>
 		</div>
 
 		<div class="card" style="margin-bottom: var(--space-6)">
