@@ -5,7 +5,8 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getPolicy, getPolicyInstallments, getPolicyClaims, deletePolicy } from '$lib/api.js';
+	import Modal from '$lib/components/Modal.svelte';
+	import { getPolicy, getPolicyInstallments, getPolicyClaims, deletePolicy, updatePolicy } from '$lib/api.js';
 
 	let policy = $state(null);
 	let installments = $state([]);
@@ -23,6 +24,44 @@
 			goto(`${base}/polizas`);
 		} catch (err) {
 			error = err.message;
+		}
+	}
+
+	let editModalOpen = $state(false);
+	let editForm = $state({});
+	let editLoading = $state(false);
+	let editError = $state('');
+
+	function openEditModal() {
+		editForm = {
+			numero_poliza: policy.numero_poliza || '',
+			tipo_seguro: policy.tipo_seguro || 'auto',
+			estado: policy.estado || 'activa',
+			vigente_desde: policy.vigente_desde || '',
+			vigente_hasta: policy.vigente_hasta || '',
+			prima_total: policy.prima_total ?? '',
+			moneda: policy.moneda || 'UYU'
+		};
+		editError = '';
+		editModalOpen = true;
+	}
+
+	async function handleEditSubmit(e) {
+		e.preventDefault();
+		editLoading = true;
+		editError = '';
+		try {
+			const data = {
+				...editForm,
+				prima_total: editForm.prima_total === '' ? null : parseFloat(editForm.prima_total)
+			};
+			await updatePolicy(policyId, data);
+			policy = await getPolicy(policyId);
+			editModalOpen = false;
+		} catch (err) {
+			editError = err.message;
+		} finally {
+			editLoading = false;
 		}
 	}
 
@@ -53,6 +92,7 @@
 		<div class="page-header">
 			<h1>Poliza {policy.numero_poliza}</h1>
 			<div style="display:flex; gap: var(--space-2)">
+					<button class="btn btn-primary btn-sm" onclick={openEditModal}>Editar</button>
 					<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
 					<a href="{base}/polizas" class="btn btn-secondary">Volver</a>
 				</div>
@@ -168,6 +208,55 @@
 		{/if}
 	{/if}
 </PortalLayout>
+
+<Modal open={editModalOpen} title="Editar poliza" onClose={() => editModalOpen = false}>
+	<form onsubmit={handleEditSubmit}>
+		<div class="form-row">
+			<div class="form-group"><label for="e-num">Numero de Poliza</label><input id="e-num" bind:value={editForm.numero_poliza} required /></div>
+			<div class="form-group">
+				<label for="e-estado">Estado</label>
+				<select id="e-estado" bind:value={editForm.estado}>
+					<option value="activa">Activa</option>
+					<option value="vencida">Vencida</option>
+					<option value="cancelada">Cancelada</option>
+					<option value="suspendida">Suspendida</option>
+					<option value="renovada">Renovada</option>
+				</select>
+			</div>
+		</div>
+		<div class="form-row">
+			<div class="form-group">
+				<label for="e-tipo">Tipo de Seguro</label>
+				<select id="e-tipo" bind:value={editForm.tipo_seguro}>
+					<option value="auto">Auto</option>
+					<option value="moto">Moto</option>
+					<option value="hogar">Hogar</option>
+					<option value="vida">Vida</option>
+					<option value="comercio">Comercio</option>
+					<option value="responsabilidad_civil">Responsabilidad Civil</option>
+					<option value="otro">Otro</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label for="e-moneda">Moneda</label>
+				<select id="e-moneda" bind:value={editForm.moneda}>
+					<option value="UYU">UYU</option>
+					<option value="USD">USD</option>
+				</select>
+			</div>
+		</div>
+		<div class="form-row">
+			<div class="form-group"><label for="e-desde">Vigente Desde</label><input id="e-desde" type="date" bind:value={editForm.vigente_desde} /></div>
+			<div class="form-group"><label for="e-hasta">Vigente Hasta</label><input id="e-hasta" type="date" bind:value={editForm.vigente_hasta} /></div>
+		</div>
+		<div class="form-group"><label for="e-prima">Prima Total</label><input id="e-prima" type="number" step="0.01" bind:value={editForm.prima_total} /></div>
+		{#if editError}<div class="alert alert-danger">{editError}</div>{/if}
+		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
+			<button type="button" class="btn btn-ghost" onclick={() => editModalOpen = false}>Cancelar</button>
+			<button type="submit" class="btn btn-primary" disabled={editLoading}>{editLoading ? 'Guardando…' : 'Guardar'}</button>
+		</div>
+	</form>
+</Modal>
 
 <style>
 	.detail-grid {
