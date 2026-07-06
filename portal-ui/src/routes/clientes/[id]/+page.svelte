@@ -6,7 +6,7 @@
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
-	import { getClient, getClientVehicles, getClientPolicies, createVehicle, deleteClient, deleteVehicle } from '$lib/api.js';
+	import { getClient, getClientVehicles, getClientPolicies, createVehicle, deleteClient, deleteVehicle, updateClient } from '$lib/api.js';
 
 	let client = $state(null);
 	let vehicles = $state([]);
@@ -24,6 +24,44 @@
 			goto(`${base}/clientes`);
 		} catch (err) {
 			error = err.message;
+		}
+	}
+
+	// Edición del cliente
+	let editModalOpen = $state(false);
+	let editForm = $state({});
+	let editLoading = $state(false);
+	let editError = $state('');
+
+	function openEditModal() {
+		editForm = {
+			nombre: client.nombre || '',
+			apellido: client.apellido || '',
+			documento_identidad: client.documento_identidad || '',
+			telefono: client.telefono || '',
+			email: client.email || '',
+			direccion: client.direccion || '',
+			fecha_nacimiento: client.fecha_nacimiento || '',
+			activo: client.activo
+		};
+		editError = '';
+		editModalOpen = true;
+	}
+
+	async function handleEditSubmit(e) {
+		e.preventDefault();
+		editLoading = true;
+		editError = '';
+		try {
+			const data = { ...editForm };
+			if (!data.fecha_nacimiento) delete data.fecha_nacimiento;
+			await updateClient(clientId, data);
+			client = await getClient(clientId);
+			editModalOpen = false;
+		} catch (err) {
+			editError = err.message;
+		} finally {
+			editLoading = false;
 		}
 	}
 
@@ -96,6 +134,7 @@
 		<div class="page-header">
 			<h1>{client.nombre} {client.apellido}</h1>
 			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-primary btn-sm" onclick={openEditModal}>Editar</button>
 				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
 				<a href="{base}/clientes" class="btn btn-secondary">Volver</a>
 			</div>
@@ -206,6 +245,34 @@
 		{/if}
 	{/if}
 </PortalLayout>
+
+<Modal open={editModalOpen} title="Editar cliente" onClose={() => editModalOpen = false}>
+	<form onsubmit={handleEditSubmit}>
+		<div class="form-row">
+			<div class="form-group"><label for="e-nombre">Nombre</label><input id="e-nombre" bind:value={editForm.nombre} required /></div>
+			<div class="form-group"><label for="e-apellido">Apellido</label><input id="e-apellido" bind:value={editForm.apellido} required /></div>
+		</div>
+		<div class="form-row">
+			<div class="form-group"><label for="e-doc">Documento</label><input id="e-doc" bind:value={editForm.documento_identidad} /></div>
+			<div class="form-group"><label for="e-tel">Telefono</label><input id="e-tel" bind:value={editForm.telefono} /></div>
+		</div>
+		<div class="form-row">
+			<div class="form-group"><label for="e-email">Email</label><input id="e-email" type="email" bind:value={editForm.email} /></div>
+			<div class="form-group"><label for="e-nac">Fecha de Nacimiento</label><input id="e-nac" type="date" bind:value={editForm.fecha_nacimiento} /></div>
+		</div>
+		<div class="form-group"><label for="e-dir">Direccion</label><input id="e-dir" bind:value={editForm.direccion} /></div>
+		<div class="form-group">
+			<label for="e-activo" style="display:flex; align-items:center; gap:8px; cursor:pointer">
+				<input id="e-activo" type="checkbox" bind:checked={editForm.activo} style="width:auto; height:auto; margin:0" /> Activo
+			</label>
+		</div>
+		{#if editError}<div class="alert alert-danger">{editError}</div>{/if}
+		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
+			<button type="button" class="btn btn-ghost" onclick={() => editModalOpen = false}>Cancelar</button>
+			<button type="submit" class="btn btn-primary" disabled={editLoading}>{editLoading ? 'Guardando…' : 'Guardar'}</button>
+		</div>
+	</form>
+</Modal>
 
 <Modal open={vehModalOpen} title="Agregar vehiculo" onClose={() => vehModalOpen = false}>
 	<form onsubmit={handleAddVehicle}>

@@ -4,7 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
-	import { getInsurer, deleteInsurer } from '$lib/api.js';
+	import Modal from '$lib/components/Modal.svelte';
+	import { getInsurer, deleteInsurer, updateInsurer } from '$lib/api.js';
 
 	let insurer = $state(null);
 	let loading = $state(true);
@@ -19,6 +20,37 @@
 			goto(`${base}/aseguradoras`);
 		} catch (err) {
 			error = err.message;
+		}
+	}
+
+	let editModalOpen = $state(false);
+	let editForm = $state({});
+	let editLoading = $state(false);
+	let editError = $state('');
+
+	function openEditModal() {
+		editForm = {
+			nombre: insurer.nombre || '',
+			telefono: insurer.telefono || '',
+			email: insurer.email || '',
+			direccion: insurer.direccion || ''
+		};
+		editError = '';
+		editModalOpen = true;
+	}
+
+	async function handleEditSubmit(e) {
+		e.preventDefault();
+		editLoading = true;
+		editError = '';
+		try {
+			await updateInsurer(insurerId, { ...editForm });
+			insurer = await getInsurer(insurerId);
+			editModalOpen = false;
+		} catch (err) {
+			editError = err.message;
+		} finally {
+			editLoading = false;
 		}
 	}
 
@@ -42,6 +74,7 @@
 		<div class="page-header">
 			<h1>{insurer.nombre}</h1>
 			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-primary btn-sm" onclick={openEditModal}>Editar</button>
 				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
 				<a href="{base}/aseguradoras" class="btn btn-secondary">Volver</a>
 			</div>
@@ -133,6 +166,22 @@
 		{/if}
 	{/if}
 </PortalLayout>
+
+<Modal open={editModalOpen} title="Editar aseguradora" onClose={() => editModalOpen = false}>
+	<form onsubmit={handleEditSubmit}>
+		<div class="form-group"><label for="e-nombre">Nombre</label><input id="e-nombre" bind:value={editForm.nombre} required /></div>
+		<div class="form-row">
+			<div class="form-group"><label for="e-tel">Telefono</label><input id="e-tel" bind:value={editForm.telefono} /></div>
+			<div class="form-group"><label for="e-email">Email</label><input id="e-email" type="email" bind:value={editForm.email} /></div>
+		</div>
+		<div class="form-group"><label for="e-dir">Direccion</label><input id="e-dir" bind:value={editForm.direccion} /></div>
+		{#if editError}<div class="alert alert-danger">{editError}</div>{/if}
+		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
+			<button type="button" class="btn btn-ghost" onclick={() => editModalOpen = false}>Cancelar</button>
+			<button type="submit" class="btn btn-primary" disabled={editLoading}>{editLoading ? 'Guardando…' : 'Guardar'}</button>
+		</div>
+	</form>
+</Modal>
 
 <style>
 	.detail-grid {
