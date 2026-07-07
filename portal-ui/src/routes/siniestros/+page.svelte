@@ -4,12 +4,15 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { getClaims } from '$lib/api.js';
 
+	const PAGE_SIZE = 20;
 	let claims = $state([]);
 	let loading = $state(true);
 	let error = $state('');
 	let statusFilter = $state('');
+	let page = $state(0);
 
 	const statusOptions = [
 		{ value: '', label: 'Todos' },
@@ -27,7 +30,7 @@
 		loading = true;
 		error = '';
 		try {
-			const params = {};
+			const params = { skip: page * PAGE_SIZE, limit: PAGE_SIZE };
 			if (statusFilter) params.estado = statusFilter;
 			claims = await getClaims(params) || [];
 		} catch (err) {
@@ -38,7 +41,13 @@
 	}
 
 	function handleFilterChange() {
+		page = 0;
 		loadClaims();
+	}
+
+	async function changePage(p) {
+		page = p;
+		await loadClaims();
 	}
 
 	let filteredClaims = $state([]);
@@ -103,5 +112,6 @@
 				<div class="empty-state"><p>No hay siniestros registrados.</p></div>
 			{/if}
 		</div>
+		<Pagination {page} pageSize={PAGE_SIZE} count={claims.length} onChange={changePage} />
 	{/if}
 </PortalLayout>

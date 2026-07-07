@@ -4,13 +4,16 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { getClients, searchClients } from '$lib/api.js';
 
+	const PAGE_SIZE = 20;
 	let clients = $state([]);
 	let loading = $state(true);
 	let error = $state('');
 	let searchQuery = $state('');
 	let searchTimeout = $state(null);
+	let page = $state(0);
 
 	const columns = [
 		{ key: 'nombre_completo', label: 'Nombre Completo' },
@@ -34,7 +37,7 @@
 		loading = true;
 		error = '';
 		try {
-			const data = await getClients();
+			const data = await getClients({ skip: page * PAGE_SIZE, limit: PAGE_SIZE });
 			clients = (data || []).map(c => ({
 				...c,
 				nombre_completo: `${c.nombre || ''} ${c.apellido || ''}`.trim()
@@ -46,12 +49,18 @@
 		}
 	}
 
+	async function changePage(p) {
+		page = p;
+		await loadClients();
+	}
+
 	function handleSearch(e) {
 		const q = e.target.value;
 		searchQuery = q;
 		if (searchTimeout) clearTimeout(searchTimeout);
 		searchTimeout = setTimeout(async () => {
 			if (!q.trim()) {
+				page = 0;
 				await loadClients();
 				return;
 			}
@@ -99,5 +108,8 @@
 		<div class="loading"><div class="spinner"></div></div>
 	{:else}
 		<DataTable {columns} data={clients} onRowClick={handleRowClick} />
+		{#if !searchQuery.trim()}
+			<Pagination {page} pageSize={PAGE_SIZE} count={clients.length} onChange={changePage} />
+		{/if}
 	{/if}
 </PortalLayout>
