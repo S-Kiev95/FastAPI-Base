@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.models.seguros.client import Client
 from app.models.seguros.insurer import Insurer
 from app.models.seguros.policy import Policy
+from app.models.seguros.vehicle import Vehicle
 from app.models.user import User
 
 
@@ -44,6 +45,18 @@ def user_names(session: Session, ids: Iterable[int]) -> Dict[int, str]:
     return {u.id: (u.name or u.email) for u in rows}
 
 
+def vehicle_labels(session: Session, ids: Iterable[int]) -> Dict[int, str]:
+    """{vehiculo_id: 'Marca Modelo — Matricula'}"""
+    ids = _ids(ids)
+    if not ids:
+        return {}
+    rows = session.exec(select(Vehicle).where(Vehicle.id.in_(ids))).all()
+    return {
+        v.id: f"{v.marca} {v.modelo or ''}".strip() + (f" — {v.matricula}" if v.matricula else "")
+        for v in rows
+    }
+
+
 def policy_map(session: Session, ids: Iterable[int]) -> Dict[int, Policy]:
     """{poliza_id: Policy} — para obtener numero_poliza y cliente_id."""
     ids = _ids(ids)
@@ -54,15 +67,17 @@ def policy_map(session: Session, ids: Iterable[int]) -> Dict[int, Policy]:
 
 
 def enrich_policies(session: Session, policies: list) -> list:
-    """Serializa pólizas agregando cliente_nombre y aseguradora_nombre."""
+    """Serializa pólizas agregando cliente_nombre, aseguradora_nombre y vehiculo_label."""
     from app.models.seguros.policy import PolicyRead
     cnames = client_names(session, (p.cliente_id for p in policies))
     inames = insurer_names(session, (p.aseguradora_id for p in policies))
+    vlabels = vehicle_labels(session, (p.vehiculo_id for p in policies))
     out = []
     for p in policies:
         d = PolicyRead.model_validate(p).model_dump()
         d["cliente_nombre"] = cnames.get(p.cliente_id)
         d["aseguradora_nombre"] = inames.get(p.aseguradora_id)
+        d["vehiculo_label"] = vlabels.get(p.vehiculo_id)
         out.append(d)
     return out
 

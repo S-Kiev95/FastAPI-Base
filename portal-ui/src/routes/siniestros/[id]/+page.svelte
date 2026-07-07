@@ -1,10 +1,12 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { getClaim, getClaimDocuments, markDocumentReceived } from '$lib/api.js';
+	import Modal from '$lib/components/Modal.svelte';
+	import { getClaim, getClaimDocuments, markDocumentReceived, deleteClaim, updateClaim } from '$lib/api.js';
 
 	let claim = $state(null);
 	let documents = $state([]);
@@ -12,6 +14,54 @@
 	let error = $state('');
 
 	let claimId = $page.params.id;
+
+	async function handleDelete() {
+		if (!confirm('¿Borrar este siniestro? Esta acción no se puede deshacer.')) return;
+		try {
+			await deleteClaim(claimId);
+			goto(`${base}/siniestros`);
+		} catch (err) {
+			error = err.message;
+		}
+	}
+
+	let editModalOpen = $state(false);
+	let editForm = $state({});
+	let editLoading = $state(false);
+	let editError = $state('');
+
+	function openEditModal() {
+		editForm = {
+			estado: claim.estado || 'abierto',
+			tipo_dano: claim.tipo_dano || 'dano_propio',
+			fecha_ocurrencia: claim.fecha_ocurrencia || '',
+			monto_reclamado: claim.monto_reclamado ?? '',
+			monto_liquidado: claim.monto_liquidado ?? '',
+			descripcion: claim.descripcion || ''
+		};
+		editError = '';
+		editModalOpen = true;
+	}
+
+	async function handleEditSubmit(e) {
+		e.preventDefault();
+		editLoading = true;
+		editError = '';
+		try {
+			const data = {
+				...editForm,
+				monto_reclamado: editForm.monto_reclamado === '' ? null : parseFloat(editForm.monto_reclamado),
+				monto_liquidado: editForm.monto_liquidado === '' ? null : parseFloat(editForm.monto_liquidado)
+			};
+			await updateClaim(claimId, data);
+			claim = await getClaim(claimId);
+			editModalOpen = false;
+		} catch (err) {
+			editError = err.message;
+		} finally {
+			editLoading = false;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -48,7 +98,11 @@
 	{:else if claim}
 		<div class="page-header">
 			<h1>Siniestro {claim.numero_siniestro || claim.id}</h1>
-			<a href="{base}/siniestros" class="btn btn-secondary">Volver</a>
+			<div style="display:flex; gap: var(--space-2)">
+				<button class="btn btn-primary btn-sm" onclick={openEditModal}>Editar</button>
+				<button class="btn btn-danger btn-sm" onclick={handleDelete}>Borrar</button>
+				<a href="{base}/siniestros" class="btn btn-secondary">Volver</a>
+			</div>
 		</div>
 
 		<div class="card" style="margin-bottom: var(--space-6)">
@@ -127,6 +181,45 @@
 		</div>
 	{/if}
 </PortalLayout>
+
+<Modal open={editModalOpen} title="Editar siniestro" onClose={() => editModalOpen = false}>
+	<form onsubmit={handleEditSubmit}>
+		<div class="form-row">
+			<div class="form-group">
+				<label for="e-estado">Estado</label>
+				<select id="e-estado" bind:value={editForm.estado}>
+					<option value="abierto">Abierto</option>
+					<option value="en_tramite">En trámite</option>
+					<option value="liquidado">Liquidado</option>
+					<option value="rechazado">Rechazado</option>
+					<option value="cerrado">Cerrado</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label for="e-tipo">Tipo de Daño</label>
+				<select id="e-tipo" bind:value={editForm.tipo_dano}>
+					<option value="dano_propio">Daño propio</option>
+					<option value="dano_tercero">Daño a tercero</option>
+					<option value="robo_total">Robo total</option>
+					<option value="robo_parcial">Robo parcial</option>
+					<option value="incendio">Incendio</option>
+					<option value="otro">Otro</option>
+				</select>
+			</div>
+		</div>
+		<div class="form-row">
+			<div class="form-group"><label for="e-fecha">Fecha de Ocurrencia</label><input id="e-fecha" type="date" bind:value={editForm.fecha_ocurrencia} /></div>
+			<div class="form-group"><label for="e-reclamado">Monto Reclamado</label><input id="e-reclamado" type="number" step="0.01" bind:value={editForm.monto_reclamado} /></div>
+		</div>
+		<div class="form-group"><label for="e-liquidado">Monto Liquidado</label><input id="e-liquidado" type="number" step="0.01" bind:value={editForm.monto_liquidado} /></div>
+		<div class="form-group"><label for="e-desc">Descripcion</label><textarea id="e-desc" bind:value={editForm.descripcion} rows="3"></textarea></div>
+		{#if editError}<div class="alert alert-danger">{editError}</div>{/if}
+		<div style="display:flex; gap: var(--space-3); justify-content:flex-end; margin-top: var(--space-4)">
+			<button type="button" class="btn btn-ghost" onclick={() => editModalOpen = false}>Cancelar</button>
+			<button type="submit" class="btn btn-primary" disabled={editLoading}>{editLoading ? 'Guardando…' : 'Guardar'}</button>
+		</div>
+	</form>
+</Modal>
 
 <style>
 	.detail-grid {

@@ -4,21 +4,33 @@
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { getPolicies } from '$lib/api.js';
 
+	const PAGE_SIZE = 20;
 	let policies = $state([]);
 	let loading = $state(true);
 	let error = $state('');
+	let page = $state(0);
 
-	onMount(async () => {
+	onMount(loadPolicies);
+
+	async function loadPolicies() {
+		loading = true;
+		error = '';
 		try {
-			policies = await getPolicies() || [];
+			policies = await getPolicies({ skip: page * PAGE_SIZE, limit: PAGE_SIZE }) || [];
 		} catch (err) {
 			error = err.message;
 		} finally {
 			loading = false;
 		}
-	});
+	}
+
+	async function changePage(p) {
+		page = p;
+		await loadPolicies();
+	}
 </script>
 
 <PortalLayout>
@@ -66,5 +78,6 @@
 				<div class="empty-state"><p>No hay polizas registradas.</p></div>
 			{/if}
 		</div>
+		<Pagination {page} pageSize={PAGE_SIZE} count={policies.length} onChange={changePage} />
 	{/if}
 </PortalLayout>
