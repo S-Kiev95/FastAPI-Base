@@ -125,7 +125,7 @@
 					</div>
 					<div class="detail-item">
 						<span class="detail-label">Vehiculo</span>
-						<span>{policy.vehiculo_id || '—'}</span>
+						<span>{policy.vehiculo_label || policy.vehiculo_id || '—'}</span>
 					</div>
 					<div class="detail-item">
 						<span class="detail-label">Aseguradora</span>

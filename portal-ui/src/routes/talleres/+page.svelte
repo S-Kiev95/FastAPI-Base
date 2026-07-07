@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
@@ -79,6 +80,6 @@
 	{#if loading}
 		<div class="loading"><div class="spinner"></div></div>
 	{:else}
-		<DataTable columns={columns} data={filteredWorkshops} />
+		<DataTable columns={columns} data={filteredWorkshops} onRowClick={(w) => goto(`${base}/talleres/${w.id}`)} />
 	{/if}
 </PortalLayout>

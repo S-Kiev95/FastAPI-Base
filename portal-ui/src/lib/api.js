@@ -256,6 +256,10 @@ export function getWorkshops(params = {}) {
 	return apiFetch(`${orgBase()}/talleres${qs ? '?' + qs : ''}`);
 }
 
+export function getWorkshop(id) {
+	return apiFetch(`${orgBase()}/talleres/${id}`);
+}
+
 export function createWorkshop(data) {
 	return apiFetch(`${orgBase()}/talleres`, { method: 'POST', body: JSON.stringify(data) });
 }

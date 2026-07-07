@@ -98,6 +98,7 @@ class PolicyRead(SQLModel):
     # Enriquecidos por la ruta (solo lectura)
     cliente_nombre: Optional[str] = None
     aseguradora_nombre: Optional[str] = None
+    vehiculo_label: Optional[str] = None
 
 
 class PolicyUpdate(SQLModel):
