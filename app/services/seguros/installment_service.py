@@ -30,15 +30,19 @@ class InstallmentService(BaseService[Installment, InstallmentCreate, Installment
         )
         return list(session.exec(statement).all())
 
-    def get_overdue(self, session: Session, organization_id: uuid.UUID) -> List[Installment]:
+    def get_overdue(
+        self, session: Session, organization_id: uuid.UUID, skip: int = 0, limit: int = 100
+    ) -> List[Installment]:
         """Cuotas vencidas (no pagadas con fecha_vencimiento pasada)."""
         today = date.today()
         statement = (
             select(Installment)
             .where(Installment.organization_id == organization_id)
-            .where(Installment.pagada == False)
+            .where(Installment.pagada == False)  # noqa: E712
             .where(Installment.fecha_vencimiento < today)
             .order_by(Installment.fecha_vencimiento)
+            .offset(skip)
+            .limit(limit)
         )
         return list(session.exec(statement).all())
 

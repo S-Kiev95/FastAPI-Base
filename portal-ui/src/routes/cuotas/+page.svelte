@@ -4,11 +4,14 @@
 	import PortalLayout from '$lib/components/PortalLayout.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { getOverdueInstallments, payInstallment } from '$lib/api.js';
 
+	const PAGE_SIZE = 20;
 	let installments = $state([]);
 	let loading = $state(true);
 	let error = $state('');
+	let page = $state(0);
 	let payModalOpen = $state(false);
 	let selectedInstallment = $state(null);
 	let payLoading = $state(false);
@@ -22,12 +25,17 @@
 		loading = true;
 		error = '';
 		try {
-			installments = await getOverdueInstallments() || [];
+			installments = await getOverdueInstallments({ skip: page * PAGE_SIZE, limit: PAGE_SIZE }) || [];
 		} catch (err) {
 			error = err.message;
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function changePage(p) {
+		page = p;
+		await loadInstallments();
 	}
 
 	function openPayModal(inst) {
@@ -105,6 +113,7 @@
 				<div class="empty-state"><p>No hay cuotas vencidas.</p></div>
 			{/if}
 		</div>
+		<Pagination {page} pageSize={PAGE_SIZE} count={installments.length} onChange={changePage} />
 	{/if}
 </PortalLayout>
 
