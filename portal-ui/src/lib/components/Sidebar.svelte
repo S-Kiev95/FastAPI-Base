@@ -13,6 +13,7 @@
 		{ href: `${base}/talleres`, label: 'Talleres', icon: 'wrench' },
 		{ href: `${base}/tareas`, label: 'Tareas', icon: 'clipboard' },
 		{ href: `${base}/mensajes`, label: 'Mensajes', icon: 'mail' },
+		{ href: `${base}/equipo`, label: 'Equipo', icon: 'team' },
 	];
 
 	function isActive(href, currentPath) {
@@ -55,6 +56,8 @@
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
 					{:else if item.icon === 'mail'}
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+					{:else if item.icon === 'team'}
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 					{/if}
 				</span>
 				<span class="nav-label">{item.label}</span>
