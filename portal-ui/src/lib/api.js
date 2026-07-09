@@ -310,6 +310,28 @@ export function getOrgUsers() {
 	return apiFetch(`${orgBase()}/usuarios`);
 }
 
+/* ── Equipo (miembros e invitaciones) ── */
+
+export function getMembers() {
+	return apiFetch(`${orgBase()}/equipo/miembros`);
+}
+
+export function getInvitations() {
+	return apiFetch(`${orgBase()}/equipo/invitaciones`);
+}
+
+export function createInvitation(data) {
+	return apiFetch(`${orgBase()}/equipo/invitaciones`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function revokeInvitation(id) {
+	return apiFetch(`${orgBase()}/equipo/invitaciones/${id}`, { method: 'DELETE' });
+}
+
+export function acceptInvitation(token) {
+	return apiFetch(`/auth/accept-invitation/${token}`, { method: 'POST' });
+}
+
 /* ── Mensajes ── */
 
 export function getInbox() {
