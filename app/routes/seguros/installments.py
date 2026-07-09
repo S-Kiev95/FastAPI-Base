@@ -34,11 +34,14 @@ async def list_installments(
 
 @router.get("/vencidas", response_model=List[InstallmentRead])
 async def get_overdue_installments(
+    skip: int = 0,
+    limit: int = 100,
     tenant: TenantContext = Depends(get_current_organization),
     session: Session = Depends(get_session),
 ):
     """Cuotas vencidas (no pagadas con fecha pasada)."""
-    return enrich_installments(session, installment_service.get_overdue(session, tenant.org_id))
+    installments = installment_service.get_overdue(session, tenant.org_id, skip=skip, limit=limit)
+    return enrich_installments(session, installments)
 
 
 @router.post("/{installment_id}/pagar", response_model=InstallmentRead)

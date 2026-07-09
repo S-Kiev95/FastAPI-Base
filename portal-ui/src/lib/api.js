@@ -206,8 +206,9 @@ export function getInstallments(params = {}) {
 	return apiFetch(`${orgBase()}/cuotas${qs ? '?' + qs : ''}`);
 }
 
-export function getOverdueInstallments() {
-	return apiFetch(`${orgBase()}/cuotas/vencidas`);
+export function getOverdueInstallments(params = {}) {
+	const qs = new URLSearchParams(params).toString();
+	return apiFetch(`${orgBase()}/cuotas/vencidas${qs ? '?' + qs : ''}`);
 }
 
 export function payInstallment(id, data = {}) {
