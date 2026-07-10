@@ -11,8 +11,8 @@
 	onMount(() => {
 		const currentPath = $page.url.pathname;
 
-		// No verificar auth en la página de login
-		if (currentPath.includes('/login')) {
+		// Rutas públicas (sin sesión): login, registro, aceptar invitación
+		if (currentPath.includes('/login') || currentPath.includes('/registro') || currentPath.includes('/aceptar-invitacion')) {
 			checking = false;
 			return;
 		}

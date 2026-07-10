@@ -1,4 +1,5 @@
 <script>
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { login } from '$lib/api.js';
@@ -8,13 +9,19 @@
 	let error = $state('');
 	let loading = $state(false);
 
+	let inviteToken = $derived($page.url.searchParams.get('invite') || '');
+
 	async function handleLogin(e) {
 		e.preventDefault();
 		error = '';
 		loading = true;
 		try {
 			await login(email, password);
-			goto(`${base}/dashboard`);
+			if (inviteToken) {
+				goto(`${base}/aceptar-invitacion?token=${encodeURIComponent(inviteToken)}`);
+			} else {
+				goto(`${base}/dashboard`);
+			}
 		} catch (err) {
 			error = err.message;
 		} finally {
@@ -45,6 +52,10 @@
 				{loading ? 'Ingresando…' : 'Ingresar'}
 			</button>
 		</form>
+
+		<p class="text-sm text-secondary" style="margin-top: var(--space-4); text-align:center">
+			¿No tenés cuenta? <a href="{base}/registro{inviteToken ? `?invite=${inviteToken}` : ''}">Crear cuenta</a>
+		</p>
 	</div>
 </div>
 

@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { acceptInvitation } from '$lib/api.js';
 
@@ -12,6 +13,12 @@
 		if (!token) {
 			status = 'error';
 			message = 'Falta el token de invitación en el link.';
+			return;
+		}
+		// Si no hay sesión, mandar a registro (o login) llevando el token
+		const loggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('portal_token');
+		if (!loggedIn) {
+			goto(`${base}/registro?invite=${encodeURIComponent(token)}`);
 			return;
 		}
 		try {
