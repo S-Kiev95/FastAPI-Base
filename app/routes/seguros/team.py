@@ -31,6 +31,10 @@ class InviteRequest(BaseModel):
     role: str = "member"
 
 
+class RoleUpdate(BaseModel):
+    role: str
+
+
 @router.get("/miembros")
 async def list_members(
     tenant: TenantContext = Depends(get_current_organization),
@@ -54,6 +58,32 @@ async def list_members(
             "is_active": m.is_active,
         })
     return out
+
+
+@router.patch("/miembros/{user_id}")
+async def update_member_role(
+    user_id: int,
+    data: RoleUpdate,
+    tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    session: Session = Depends(get_session),
+):
+    """Cambia el rol de un miembro (requiere admin+)."""
+    m = membership_service.update_role(session, tenant.org_id, user_id, data.role)
+    if not m:
+        raise HTTPException(status_code=404, detail="Miembro no encontrado")
+    return {"user_id": m.user_id, "role": m.role, "is_active": m.is_active}
+
+
+@router.delete("/miembros/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_member(
+    user_id: int,
+    tenant: TenantContext = Depends(require_org_role(MembershipRole.admin)),
+    session: Session = Depends(get_session),
+):
+    """Remueve un miembro de la organización (no se puede remover al owner)."""
+    ok = membership_service.remove_member(session, tenant.org_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="No se pudo remover el miembro (¿es el owner?)")
 
 
 @router.get("/invitaciones", response_model=List[InvitationRead])

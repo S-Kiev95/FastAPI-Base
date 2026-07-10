@@ -77,6 +77,19 @@ export async function login(email, password) {
 	return data;
 }
 
+export async function register(email, password, name, organization_name) {
+	const res = await fetch('/auth/register', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email, password, name, organization_name })
+	});
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw new Error(body.detail || 'No se pudo registrar');
+	}
+	return res.json();
+}
+
 export function logout() {
 	localStorage.removeItem('portal_token');
 	localStorage.removeItem('portal_org_slug');
@@ -314,6 +327,14 @@ export function getOrgUsers() {
 
 export function getMembers() {
 	return apiFetch(`${orgBase()}/equipo/miembros`);
+}
+
+export function updateMemberRole(userId, role) {
+	return apiFetch(`${orgBase()}/equipo/miembros/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
+}
+
+export function removeMember(userId) {
+	return apiFetch(`${orgBase()}/equipo/miembros/${userId}`, { method: 'DELETE' });
 }
 
 export function getInvitations() {
