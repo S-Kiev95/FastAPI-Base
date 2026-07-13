@@ -1,7 +1,7 @@
 # Multi-stage build for FastAPI application
 
 # Stage 1: Build stage
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
 WORKDIR /app
 
@@ -17,11 +17,15 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv sync --frozen --no-dev
+# Usar el Python del sistema (3.13) en vez de que uv descargue uno propio,
+# así el venv no queda con un symlink roto en la etapa de runtime.
+ENV UV_PYTHON_PREFERENCE=only-system
+# Instala todas las dependencias (httpx y otras usadas en runtime están en el
+# grupo dev, así que --no-dev rompía la app).
+RUN uv sync --frozen
 
 # Stage 2: Runtime stage
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 

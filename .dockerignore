@@ -57,9 +57,8 @@ docs/
 *.log
 logs/
 
-# Alembic (migrations handled separately)
-alembic.ini
-alembic/versions/
+# Nota: alembic.ini y alembic/versions/ SÍ deben ir a la imagen para poder
+# correr `alembic upgrade head` dentro del contenedor en el arranque.
 
 # Cache
 .cache/
